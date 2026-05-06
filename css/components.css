@@ -1,0 +1,227 @@
+/* ============================================
+   COMPONENTES REUTILIZABLES
+   ============================================ */
+
+/* ============ CARD (sustituye glass-card) ============ */
+.glass-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.glass-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.glass-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.glass-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.glass-card-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* ============ BOTONES ============ */
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-glow);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+}
+
+.btn-icon {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-primary);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--color-danger);
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* ============ ICON BOX ============ */
+.icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-box-lg {
+  width: 44px;
+  height: 44px;
+}
+
+[data-theme="dark"] .icon-box.purple { background: rgba(139, 92, 246, 0.15); color: #A78BFA; }
+[data-theme="dark"] .icon-box.cyan   { background: rgba(6, 182, 212, 0.15); color: #22D3EE; }
+[data-theme="dark"] .icon-box.pink   { background: rgba(236, 72, 153, 0.15); color: #F472B6; }
+[data-theme="dark"] .icon-box.green  { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+[data-theme="dark"] .icon-box.red    { background: rgba(239, 68, 68, 0.15); color: #F87171; }
+[data-theme="dark"] .icon-box.amber  { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
+[data-theme="dark"] .icon-box.blue   { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+
+[data-theme="light"] .icon-box.purple { background: rgba(139, 92, 246, 0.12); color: #7C3AED; }
+[data-theme="light"] .icon-box.cyan   { background: rgba(6, 182, 212, 0.12); color: #0891B2; }
+[data-theme="light"] .icon-box.pink   { background: rgba(236, 72, 153, 0.12); color: #DB2777; }
+[data-theme="light"] .icon-box.green  { background: rgba(16, 185, 129, 0.12); color: #059669; }
+[data-theme="light"] .icon-box.red    { background: rgba(239, 68, 68, 0.12); color: #DC2626; }
+[data-theme="light"] .icon-box.amber  { background: rgba(245, 158, 11, 0.12); color: #D97706; }
+[data-theme="light"] .icon-box.blue   { background: rgba(59, 130, 246, 0.12); color: #2563EB; }
+
+/* Default por si no hay data-theme */
+.icon-box.purple { background: rgba(139, 92, 246, 0.15); color: #A78BFA; }
+.icon-box.cyan   { background: rgba(6, 182, 212, 0.15); color: #22D3EE; }
+.icon-box.pink   { background: rgba(236, 72, 153, 0.15); color: #F472B6; }
+.icon-box.green  { background: rgba(16, 185, 129, 0.15); color: #34D399; }
+.icon-box.red    { background: rgba(239, 68, 68, 0.15); color: #F87171; }
+.icon-box.amber  { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
+.icon-box.blue   { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+
+/* ============ PROGRESS BAR ============ */
+.progress-bar {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.progress-fill.green { background: linear-gradient(90deg, var(--color-success), var(--accent-secondary)); }
+.progress-fill.amber { background: linear-gradient(90deg, var(--color-warning), #FCA5A5); }
+.progress-fill.red   { background: linear-gradient(90deg, var(--color-danger), #F472B6); }
+.progress-fill.white { background: white; }
+.progress-fill.blue  { background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); }
+
+/* ============ BADGE ============ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge.success { background: rgba(16, 185, 129, 0.15); color: var(--color-success); }
+.badge.warning { background: rgba(245, 158, 11, 0.15); color: var(--color-warning); }
+.badge.danger  { background: rgba(239, 68, 68, 0.15); color: var(--color-danger); }
+.badge.info    { background: rgba(59, 130, 246, 0.15); color: var(--color-info); }
+
+/* ============ TEXTOS ============ */
+.text-success { color: var(--color-success); }
+.text-danger  { color: var(--color-danger); }
+.text-warning { color: var(--color-warning); }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary  { color: var(--text-tertiary); }
+
+/* ============ CURRENCY ============ */
+.currency-symbol {
+  font-size: 0.75em;
+  opacity: 0.7;
+  font-weight: 500;
+  margin-right: 2px;
+}
+
+/* ============ THEME TOGGLE ============ */
+.theme-toggle {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-toggle .sun-icon,
+.theme-toggle .moon-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .theme-toggle .sun-icon {
+  opacity: 1;
+  transform: translate(-50%, -50%) rotate(0);
+}
+
+[data-theme="dark"] .theme-toggle .moon-icon {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+[data-theme="light"] .theme-toggle .sun-icon {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+[data-theme="light"] .theme-toggle .moon-icon {
+  opacity: 1;
+  transform: translate(-50%, -50%) rotate(0);
+}

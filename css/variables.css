@@ -1,0 +1,171 @@
+/* ============================================
+   VARIABLES CSS - SISTEMA DE TEMAS
+   Tema oscuro (default) + tema claro
+   El sidebar siempre se mantiene azul navy oscuro
+   ============================================ */
+
+/* ============ VARIABLES INVARIANTES ============ */
+:root {
+  /* Tipografía */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  /* Espaciados */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  
+  /* Bordes */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+  
+  /* Transiciones */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  
+  /* Anchos del layout */
+  --sidebar-width: 80px;
+  --sidebar-width-expanded: 240px;
+  --header-height: 72px;
+  
+  /* SIDEBAR (azul navy, no cambia con el tema) */
+  --sidebar-bg: #1E3A5F;
+  --sidebar-bg-hover: #2A4A73;
+  --sidebar-active: #3B82F6;
+  --sidebar-text: rgba(255, 255, 255, 0.7);
+  --sidebar-text-active: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  
+  /* COLORES SEMÁNTICOS (constantes) */
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+  
+  /* COLORES DE GRÁFICOS (constantes) */
+  --chart-1: #3B82F6;  /* azul */
+  --chart-2: #06B6D4;  /* cyan */
+  --chart-3: #8B5CF6;  /* violeta */
+  --chart-4: #F59E0B;  /* ámbar */
+  --chart-5: #EF4444;  /* rojo */
+  --chart-6: #10B981;  /* verde */
+}
+
+/* ============================================
+   TEMA OSCURO (DEFAULT)
+   ============================================ */
+:root,
+[data-theme="dark"] {
+  /* Fondos */
+  --bg-primary: #0F1729;        /* fondo principal azul muy oscuro */
+  --bg-secondary: #1A2332;      /* fondo de cards */
+  --bg-tertiary: #243044;       /* hovers y elementos elevados */
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-hover: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
+  
+  /* Card backgrounds */
+  --card-bg: #1A2332;
+  --card-border: rgba(255, 255, 255, 0.06);
+  
+  /* Texto */
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.5);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  
+  /* Acentos */
+  --accent-primary: #3B82F6;     /* azul navy fintech */
+  --accent-secondary: #06B6D4;   /* cyan */
+  --accent-tertiary: #8B5CF6;    /* violeta para variedad */
+  
+  /* Banner / hero */
+  --hero-bg: linear-gradient(135deg, #1E3A5F, #06B6D4);
+  
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  
+  /* Inputs */
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-focus-bg: rgba(255, 255, 255, 0.07);
+  --input-focus-border: var(--accent-primary);
+  
+  /* Auroras/blobs decorativos (atenuados) */
+  --aurora-1: rgba(59, 130, 246, 0.4);
+  --aurora-2: rgba(6, 182, 212, 0.3);
+  --aurora-3: rgba(139, 92, 246, 0.25);
+  
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================
+   TEMA CLARO
+   ============================================ */
+[data-theme="light"] {
+  /* Fondos */
+  --bg-primary: #F4F6FB;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #E8EDF5;
+  
+  /* Glassmorphism (más sólido en claro) */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-hover: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(30, 58, 95, 0.08);
+  --glass-border-hover: rgba(30, 58, 95, 0.2);
+  
+  /* Card backgrounds */
+  --card-bg: #FFFFFF;
+  --card-border: rgba(30, 58, 95, 0.06);
+  
+  /* Texto */
+  --text-primary: #1A2332;
+  --text-secondary: rgba(26, 35, 50, 0.7);
+  --text-tertiary: rgba(26, 35, 50, 0.5);
+  --text-muted: rgba(26, 35, 50, 0.35);
+  
+  /* Acentos (mismos pero con más saturación) */
+  --accent-primary: #3B82F6;
+  --accent-secondary: #06B6D4;
+  --accent-tertiary: #8B5CF6;
+  
+  /* Banner / hero */
+  --hero-bg: linear-gradient(135deg, #1E3A5F 0%, #06B6D4 100%);
+  
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(30, 58, 95, 0.08);
+  --shadow-md: 0 4px 20px rgba(30, 58, 95, 0.12);
+  --shadow-glow: 0 4px 20px rgba(59, 130, 246, 0.25);
+  
+  /* Inputs */
+  --input-bg: #F4F6FB;
+  --input-border: rgba(30, 58, 95, 0.1);
+  --input-focus-bg: #FFFFFF;
+  --input-focus-border: var(--accent-primary);
+  
+  /* Auroras casi invisibles en claro */
+  --aurora-1: rgba(59, 130, 246, 0.08);
+  --aurora-2: rgba(6, 182, 212, 0.08);
+  --aurora-3: rgba(139, 92, 246, 0.05);
+  
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(30, 58, 95, 0.15);
+  --scrollbar-thumb-hover: rgba(30, 58, 95, 0.25);
+}
+
+/* Transición suave al cambiar tema */
+body, .glass-card, .nav-item, .form-input, .btn-primary, .btn-secondary {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

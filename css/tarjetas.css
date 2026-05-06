@@ -1,0 +1,398 @@
+/* ============================================
+   PÁGINA: TARJETAS DE CRÉDITO
+   ============================================ */
+
+.tarjetas-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Tarjeta seleccionada arriba (centrada) */
+.tarjeta-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+}
+
+.tarjeta-hero-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tarjeta-hero-actions button {
+  flex: 0 1 auto;
+}
+
+/* Stats grandes de la tarjeta */
+.tarjeta-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.tarjeta-stat {
+  text-align: center;
+  padding: var(--space-md);
+}
+
+.tarjeta-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.tarjeta-stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tarjeta-stat-secondary {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.tarjeta-stat-value.danger { color: var(--color-danger); }
+.tarjeta-stat-value.success { color: var(--color-success); }
+.tarjeta-stat-value.warning { color: var(--color-warning); }
+
+/* Tabs (Ciclo actual / Facturado / Histórico) */
+.tabs-container {
+  display: flex;
+  gap: 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-bottom: var(--space-md);
+  overflow-x: auto;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tab-button:hover {
+  color: var(--text-primary);
+}
+
+.tab-button.active {
+  background: rgba(124, 58, 237, 0.2);
+  color: var(--text-primary);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+}
+
+.tab-button-meta {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* Info del ciclo */
+.ciclo-info {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.ciclo-info-text {
+  flex: 1;
+  min-width: 200px;
+}
+
+.ciclo-info-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ciclo-info-desc {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.ciclo-info-amount {
+  text-align: right;
+}
+
+.ciclo-info-amount-label {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.ciclo-info-amount-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Selector de tarjetas tipo "tarjetero" */
+.tarjeta-selector {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+  margin-bottom: var(--space-md);
+  scrollbar-width: none;
+}
+
+.tarjeta-selector::-webkit-scrollbar { display: none; }
+
+.tarjeta-selector-item {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.tarjeta-selector-item:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+}
+
+.tarjeta-selector-item.active {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+  color: var(--text-primary);
+}
+
+.tarjeta-selector-item .badge-mini {
+  font-size: 0.6875rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* Botón "agregar tarjeta" como tarjeta vacía */
+.tarjeta-add-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px dashed var(--glass-border-hover);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-tertiary);
+  text-align: center;
+  min-height: 200px;
+}
+
+.tarjeta-add-card:hover {
+  background: var(--glass-bg);
+  border-color: var(--accent-purple);
+  color: var(--text-primary);
+}
+
+.tarjeta-add-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+
+.tarjeta-add-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* ============ CUOTAS ============ */
+.cuotas-section {
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.cuotas-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.cuotas-toggle input {
+  margin: 0;
+}
+
+.cuotas-config {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.cuotas-info {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: var(--space-sm);
+}
+
+.cuotas-info strong {
+  color: var(--text-primary);
+}
+
+/* Etiqueta de cuotas en transaction item */
+.trans-cuotas-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  padding: 2px 8px;
+  background: rgba(124, 58, 237, 0.2);
+  border-radius: var(--radius-full);
+  color: #A78BFA;
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+/* ============ MODAL DE PAGO ============ */
+.pago-suggestions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.pago-sugg-btn {
+  padding: 10px 16px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+
+.pago-sugg-btn:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+}
+
+.pago-sugg-btn.selected {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+  color: var(--text-primary);
+}
+
+.pago-sugg-label {
+  font-size: 0.6875rem;
+  opacity: 0.7;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pago-sugg-amount {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+/* Conversión de moneda en el modal de pago */
+.pago-conversion {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin-top: var(--space-sm);
+}
+
+.pago-conversion strong {
+  color: var(--text-primary);
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 768px) {
+  .tarjeta-stats-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+  
+  .tarjeta-stat {
+    padding: var(--space-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+  }
+  
+  .tarjeta-stat-label {
+    margin-bottom: 0;
+  }
+  
+  .tarjeta-stat-value {
+    margin-bottom: 0;
+  }
+  
+  .tab-button {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+  
+  .tab-button-meta {
+    display: none;
+  }
+  
+  .ciclo-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .ciclo-info-amount {
+    text-align: left;
+  }
+}

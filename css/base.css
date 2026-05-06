@@ -1,0 +1,109 @@
+/* ============================================
+   ESTILOS BASE
+   ============================================ */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* AURORAS (visibles solo en tema oscuro, casi invisibles en claro) */
+.aurora {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.aurora-purple {
+  top: -10%;
+  left: -10%;
+  width: 50%;
+  height: 50%;
+  background: var(--aurora-3);
+}
+
+.aurora-cyan {
+  bottom: -10%;
+  right: -10%;
+  width: 50%;
+  height: 50%;
+  background: var(--aurora-2);
+}
+
+.aurora-pink {
+  top: 40%;
+  right: 30%;
+  width: 30%;
+  height: 30%;
+  background: var(--aurora-1);
+}
+
+@media (max-width: 768px) {
+  .aurora-purple, .aurora-cyan {
+    width: 80%;
+    height: 40%;
+  }
+  .aurora-pink {
+    display: none;
+  }
+}
+
+::selection {
+  background: var(--accent-primary);
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1rem; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul, ol {
+  list-style: none;
+}
