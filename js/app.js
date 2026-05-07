@@ -134,6 +134,12 @@ const App = {
       case 'presupuestos':
         Presupuestos.render(container, this.estado.monedaVista);
         break;
+      case 'deudas':
+        Deudas.render(container, this.estado.monedaVista);
+        break;
+      case 'metas':
+        Metas.render(container, this.estado.monedaVista);
+        break;
       default:
         container.innerHTML = `
           <div class="glass-card" style="text-align: center; padding: 3rem;">

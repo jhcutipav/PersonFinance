@@ -830,6 +830,283 @@ const API = {
     return items;
   },
   
+  /* ========== DEUDAS / PRÉSTAMOS ========== */
+  obtenerDeudas(filtros = {}) {
+    let deudas = Storage.cargar('deudas') || [];
+    
+    if (filtros.activos === true) {
+      deudas = deudas.filter(d => d.activo);
+    }
+    
+    return deudas;
+  },
+  
+  obtenerDeudaPorId(id) {
+    const deudas = Storage.cargar('deudas') || [];
+    return deudas.find(d => d.id === id);
+  },
+  
+  crearDeuda(datos) {
+    const deudas = Storage.cargar('deudas') || [];
+    const nueva = {
+      id: Storage.nuevoId('deudas'),
+      nombre: datos.nombre,
+      acreedor: datos.acreedor || '',
+      capital: parseFloat(datos.capital),
+      moneda: datos.moneda || 'PEN',
+      tasaTEA: parseFloat(datos.tasaTEA),
+      plazoMeses: parseInt(datos.plazoMeses),
+      cuotasPagadas: parseInt(datos.cuotasPagadas) || 0,
+      sistema: datos.sistema || 'frances',
+      diaPago: parseInt(datos.diaPago) || 1,
+      fechaInicio: datos.fechaInicio || new Date().toISOString().split('T')[0],
+      cuentaPagoId: parseInt(datos.cuentaPagoId),
+      categoriaId: parseInt(datos.categoriaId) || 8,
+      icono: datos.icono || '💵',
+      color: datos.color || 'amber',
+      activo: true,
+    };
+    deudas.push(nueva);
+    Storage.guardar('deudas', deudas);
+    return nueva;
+  },
+  
+  actualizarDeuda(id, datos) {
+    const deudas = Storage.cargar('deudas') || [];
+    const idx = deudas.findIndex(d => d.id === id);
+    if (idx === -1) return null;
+    
+    deudas[idx] = {
+      ...deudas[idx],
+      ...datos,
+      capital: parseFloat(datos.capital || deudas[idx].capital),
+      tasaTEA: parseFloat(datos.tasaTEA || deudas[idx].tasaTEA),
+      plazoMeses: parseInt(datos.plazoMeses || deudas[idx].plazoMeses),
+      cuotasPagadas: parseInt(datos.cuotasPagadas !== undefined ? datos.cuotasPagadas : deudas[idx].cuotasPagadas),
+    };
+    Storage.guardar('deudas', deudas);
+    return deudas[idx];
+  },
+  
+  eliminarDeuda(id) {
+    const deudas = Storage.cargar('deudas') || [];
+    const filtradas = deudas.filter(d => d.id !== id);
+    Storage.guardar('deudas', filtradas);
+    return true;
+  },
+  
+  /**
+   * Registra el pago de una cuota: descuenta cuenta + incrementa cuotasPagadas
+   */
+  pagarCuotaDeuda(deudaId, datos = {}) {
+    const deuda = this.obtenerDeudaPorId(deudaId);
+    if (!deuda) throw new Error('Deuda no encontrada');
+    
+    const cronograma = Prestamos.generarCronograma(
+      deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema
+    );
+    
+    const cuotaIndex = deuda.cuotasPagadas;
+    if (cuotaIndex >= cronograma.length) {
+      throw new Error('Esta deuda ya está totalmente pagada');
+    }
+    
+    const cuota = cronograma[cuotaIndex];
+    const monto = parseFloat(datos.monto || cuota.cuota);
+    const fecha = datos.fecha || new Date().toISOString().split('T')[0];
+    
+    // Crear transacción
+    this.crearTransaccion({
+      cuentaId: deuda.cuentaPagoId,
+      categoriaId: deuda.categoriaId || 8,
+      tipo: 'egreso',
+      monto: monto,
+      descripcion: `Cuota ${cuotaIndex + 1}/${deuda.plazoMeses} - ${deuda.nombre}`,
+      fecha: fecha,
+    });
+    
+    // Incrementar cuotasPagadas
+    return this.actualizarDeuda(deudaId, { cuotasPagadas: deuda.cuotasPagadas + 1 });
+  },
+  
+  /**
+   * Calcula el saldo pendiente actual de una deuda según cuotas pagadas
+   */
+  calcularSaldoDeuda(deuda) {
+    const cronograma = Prestamos.generarCronograma(
+      deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema
+    );
+    
+    if (deuda.cuotasPagadas >= cronograma.length) return 0;
+    
+    return cronograma[deuda.cuotasPagadas].saldoInicial;
+  },
+  
+  /* ========== METAS DE AHORRO ========== */
+  obtenerMetas(filtros = {}) {
+    let metas = Storage.cargar('metas') || [];
+    
+    if (filtros.activas === true) {
+      metas = metas.filter(m => m.activa);
+    }
+    
+    if (filtros.completadas === true) {
+      metas = metas.filter(m => m.montoActual >= m.montoObjetivo);
+    } else if (filtros.completadas === false) {
+      metas = metas.filter(m => m.montoActual < m.montoObjetivo);
+    }
+    
+    return metas;
+  },
+  
+  obtenerMetaPorId(id) {
+    const metas = Storage.cargar('metas') || [];
+    return metas.find(m => m.id === id);
+  },
+  
+  crearMeta(datos) {
+    const metas = Storage.cargar('metas') || [];
+    const nueva = {
+      id: Storage.nuevoId('metas'),
+      nombre: datos.nombre,
+      descripcion: datos.descripcion || '',
+      montoObjetivo: parseFloat(datos.montoObjetivo),
+      montoActual: parseFloat(datos.montoActual) || 0,
+      moneda: datos.moneda || 'PEN',
+      fechaLimite: datos.fechaLimite,
+      fechaCreacion: new Date().toISOString().split('T')[0],
+      cuentaAhorroId: parseInt(datos.cuentaAhorroId),
+      icono: datos.icono || '🎯',
+      color: datos.color || 'cyan',
+      prioridad: datos.prioridad || 'media',
+      activa: true,
+      historial: [],
+    };
+    metas.push(nueva);
+    Storage.guardar('metas', metas);
+    return nueva;
+  },
+  
+  actualizarMeta(id, datos) {
+    const metas = Storage.cargar('metas') || [];
+    const idx = metas.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    
+    metas[idx] = {
+      ...metas[idx],
+      ...datos,
+      montoObjetivo: parseFloat(datos.montoObjetivo || metas[idx].montoObjetivo),
+      montoActual: parseFloat(datos.montoActual !== undefined ? datos.montoActual : metas[idx].montoActual),
+    };
+    Storage.guardar('metas', metas);
+    return metas[idx];
+  },
+  
+  eliminarMeta(id) {
+    const metas = Storage.cargar('metas') || [];
+    const filtradas = metas.filter(m => m.id !== id);
+    Storage.guardar('metas', filtradas);
+    return true;
+  },
+  
+  /**
+   * Aporta a una meta: aumenta el monto actual y registra en el historial.
+   * Opcionalmente registra una transacción (transferencia desde otra cuenta).
+   */
+  aportarAMeta(metaId, monto, opciones = {}) {
+    const meta = this.obtenerMetaPorId(metaId);
+    if (!meta) throw new Error('Meta no encontrada');
+    
+    const fecha = opciones.fecha || new Date().toISOString().split('T')[0];
+    const montoNum = parseFloat(monto);
+    if (isNaN(montoNum) || montoNum <= 0) throw new Error('Monto inválido');
+    
+    // Actualizar la meta
+    const metas = Storage.cargar('metas') || [];
+    const idx = metas.findIndex(m => m.id === metaId);
+    if (idx === -1) throw new Error('Meta no encontrada');
+    
+    metas[idx].montoActual += montoNum;
+    if (!metas[idx].historial) metas[idx].historial = [];
+    metas[idx].historial.push({
+      fecha,
+      monto: montoNum,
+      tipo: 'aporte',
+    });
+    Storage.guardar('metas', metas);
+    
+    return metas[idx];
+  },
+  
+  /**
+   * Retira dinero de una meta (cuando se cumple o por necesidad)
+   */
+  retirarDeMeta(metaId, monto, opciones = {}) {
+    const meta = this.obtenerMetaPorId(metaId);
+    if (!meta) throw new Error('Meta no encontrada');
+    
+    const fecha = opciones.fecha || new Date().toISOString().split('T')[0];
+    const montoNum = parseFloat(monto);
+    if (isNaN(montoNum) || montoNum <= 0) throw new Error('Monto inválido');
+    if (montoNum > meta.montoActual) throw new Error('No tienes suficiente ahorrado');
+    
+    const metas = Storage.cargar('metas') || [];
+    const idx = metas.findIndex(m => m.id === metaId);
+    
+    metas[idx].montoActual -= montoNum;
+    if (!metas[idx].historial) metas[idx].historial = [];
+    metas[idx].historial.push({
+      fecha,
+      monto: montoNum,
+      tipo: 'retiro',
+    });
+    Storage.guardar('metas', metas);
+    
+    return metas[idx];
+  },
+  
+  /**
+   * Calcula el aporte mensual recomendado para llegar a la meta a tiempo
+   */
+  calcularAporteMensualRecomendado(meta) {
+    const hoy = new Date();
+    const limite = new Date(meta.fechaLimite);
+    const restante = meta.montoObjetivo - meta.montoActual;
+    
+    if (restante <= 0) return 0;
+    if (limite <= hoy) return restante; // ya venció
+    
+    // Diferencia en meses (aproximado)
+    const meses = Math.max(1, 
+      (limite.getFullYear() - hoy.getFullYear()) * 12 + 
+      (limite.getMonth() - hoy.getMonth())
+    );
+    
+    return restante / meses;
+  },
+  
+  /**
+   * Calcula el estado de una meta: en_curso, atrasada, completada, vencida
+   */
+  obtenerEstadoMeta(meta) {
+    if (meta.montoActual >= meta.montoObjetivo) return 'completada';
+    
+    const hoy = new Date();
+    const limite = new Date(meta.fechaLimite);
+    
+    if (limite < hoy) return 'vencida';
+    
+    // Calcular si vamos atrasados según el ritmo
+    const inicio = new Date(meta.fechaCreacion);
+    const totalDias = Math.max(1, (limite - inicio) / (1000 * 60 * 60 * 24));
+    const diasTranscurridos = (hoy - inicio) / (1000 * 60 * 60 * 24);
+    const proporcionTiempo = diasTranscurridos / totalDias;
+    const proporcionAhorro = meta.montoActual / meta.montoObjetivo;
+    
+    if (proporcionAhorro < proporcionTiempo - 0.1) return 'atrasada';
+    return 'en_curso';
+  },
+  
   /* ========== UTILIDADES ========== */
   resetear() {
     Storage.limpiarTodo();

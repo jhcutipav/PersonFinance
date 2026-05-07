@@ -1,0 +1,488 @@
+/* ============================================
+   PÁGINA: DEUDAS Y SIMULADOR
+   ============================================ */
+
+.deudas-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Tabs principales: Simulador | Mis deudas */
+.deudas-main-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  width: fit-content;
+}
+
+.deudas-main-tab {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.deudas-main-tab:hover {
+  color: var(--text-primary);
+}
+
+.deudas-main-tab.active {
+  background: var(--accent-primary);
+  color: #0A0E1A;
+}
+
+/* ============================================
+   SIMULADOR
+   ============================================ */
+.simulador-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+/* Card del formulario del simulador */
+.simulador-form {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  position: sticky;
+  top: var(--space-md);
+}
+
+.simulador-form-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Resultados */
+.simulador-results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Cards de resumen */
+.sim-resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+
+.sim-resumen-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.sim-resumen-card.highlight {
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.15), rgba(6, 182, 212, 0.1));
+  border-color: rgba(20, 240, 205, 0.3);
+}
+
+.sim-resumen-label {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.sim-resumen-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sim-resumen-value.danger { color: var(--color-danger); }
+.sim-resumen-value.success { color: var(--accent-primary); }
+
+.sim-resumen-meta {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Cronograma tabla */
+.cronograma-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.cronograma-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.cronograma-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cronograma-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cronograma-table-wrapper {
+  overflow-x: auto;
+  margin: 0 calc(var(--space-lg) * -1);
+  padding: 0 var(--space-lg);
+}
+
+.cronograma-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.cronograma-table thead th {
+  text-align: right;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+}
+
+.cronograma-table thead th:first-child {
+  text-align: center;
+}
+
+.cronograma-table thead th:nth-child(2) {
+  text-align: left;
+}
+
+.cronograma-table tbody td {
+  padding: 10px 12px;
+  text-align: right;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+}
+
+.cronograma-table tbody td:first-child {
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.cronograma-table tbody td:nth-child(2) {
+  text-align: left;
+  color: var(--text-secondary);
+}
+
+.cronograma-table tbody tr:hover {
+  background: var(--card-bg-secondary);
+}
+
+.cronograma-table tbody tr.pagada {
+  opacity: 0.5;
+}
+
+.cronograma-table tbody tr.pagada td:first-child::after {
+  content: ' ✓';
+  color: var(--color-success);
+}
+
+/* Gráfico de composición */
+.cronograma-chart {
+  height: 240px;
+  margin-top: var(--space-md);
+}
+
+/* ============================================
+   MIS DEUDAS (lista de deudas reales)
+   ============================================ */
+.deudas-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.deudas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: var(--space-md);
+}
+
+.deuda-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deuda-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.deuda-card.completa {
+  opacity: 0.6;
+}
+
+.deuda-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.deuda-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.deuda-card-info { flex: 1; min-width: 0; }
+
+.deuda-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deuda-card-acreedor {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.deuda-card-progress-section {
+  margin: 12px 0;
+}
+
+.deuda-card-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.deuda-card-progress-label strong { color: var(--text-primary); }
+
+.deuda-card-progress {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.deuda-card-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.deuda-card-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  background: var(--card-bg-secondary);
+  border-radius: var(--radius-md);
+  margin: 12px 0;
+}
+
+.deuda-card-stat-label {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.deuda-card-stat-value {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.deuda-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-border);
+}
+
+.deuda-next-cuota {
+  font-size: 0.75rem;
+}
+
+.deuda-next-cuota-label {
+  color: var(--text-tertiary);
+}
+
+.deuda-next-cuota-amount {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.deuda-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.deuda-action-btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.deuda-action-btn.pay {
+  background: var(--accent-primary);
+  color: #0A0E1A;
+}
+
+.deuda-action-btn.pay:hover {
+  transform: translateY(-1px);
+}
+
+.deuda-action-btn.detail {
+  background: var(--card-bg-secondary);
+  color: var(--text-secondary);
+}
+
+.deuda-action-btn.detail:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Empty state */
+.deudas-empty {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-tertiary);
+}
+
+.deudas-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: var(--space-md);
+  opacity: 0.5;
+}
+
+.deudas-empty h3 {
+  font-size: 1.125rem;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.deudas-empty p {
+  font-size: 0.875rem;
+  margin-bottom: var(--space-lg);
+}
+
+/* Modal de detalle de deuda */
+.deuda-detail-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.deuda-detail-stat {
+  text-align: left;
+}
+
+.deuda-detail-stat-label {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.deuda-detail-stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .simulador-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .simulador-form {
+    position: static;
+  }
+  
+  .sim-resumen-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .deudas-stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .sim-resumen-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .deudas-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .deuda-card-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .cronograma-table {
+    font-size: 0.75rem;
+  }
+  
+  .cronograma-table thead th,
+  .cronograma-table tbody td {
+    padding: 6px 8px;
+  }
+}
