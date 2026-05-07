@@ -62,9 +62,9 @@
 :root,
 [data-theme="dark"] {
   /* Fondos */
-  --bg-primary: #0F1729;        /* fondo principal azul muy oscuro */
-  --bg-secondary: #1A2332;      /* fondo de cards */
-  --bg-tertiary: #243044;       /* hovers y elementos elevados */
+  --bg-primary: #0A0E1A;
+  --bg-secondary: #131825;
+  --bg-tertiary: #1B2230;
   
   /* Glassmorphism */
   --glass-bg: rgba(255, 255, 255, 0.04);
@@ -73,7 +73,8 @@
   --glass-border-hover: rgba(255, 255, 255, 0.15);
   
   /* Card backgrounds */
-  --card-bg: #1A2332;
+  --card-bg: #131825;
+  --card-bg-secondary: #1B2230;
   --card-border: rgba(255, 255, 255, 0.06);
   
   /* Texto */
@@ -82,10 +83,10 @@
   --text-tertiary: rgba(255, 255, 255, 0.5);
   --text-muted: rgba(255, 255, 255, 0.4);
   
-  /* Acentos */
-  --accent-primary: #3B82F6;     /* azul navy fintech */
-  --accent-secondary: #06B6D4;   /* cyan */
-  --accent-tertiary: #8B5CF6;    /* violeta para variedad */
+  /* Acentos (estilo referencia: cyan brillante) */
+  --accent-primary: #14F0CD;
+  --accent-secondary: #06B6D4;
+  --accent-tertiary: #8B5CF6;
   
   /* Banner / hero */
   --hero-bg: linear-gradient(135deg, #1E3A5F, #06B6D4);
@@ -93,7 +94,7 @@
   /* Sombras */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  --shadow-glow: 0 4px 20px rgba(20, 240, 205, 0.3);
   
   /* Inputs */
   --input-bg: rgba(255, 255, 255, 0.04);
@@ -101,10 +102,10 @@
   --input-focus-bg: rgba(255, 255, 255, 0.07);
   --input-focus-border: var(--accent-primary);
   
-  /* Auroras/blobs decorativos (atenuados) */
-  --aurora-1: rgba(59, 130, 246, 0.4);
-  --aurora-2: rgba(6, 182, 212, 0.3);
-  --aurora-3: rgba(139, 92, 246, 0.25);
+  /* Auroras decorativas */
+  --aurora-1: rgba(20, 240, 205, 0.25);
+  --aurora-2: rgba(6, 182, 212, 0.2);
+  --aurora-3: rgba(139, 92, 246, 0.2);
   
   /* Scrollbar */
   --scrollbar-thumb: rgba(255, 255, 255, 0.1);
@@ -128,6 +129,7 @@
   
   /* Card backgrounds */
   --card-bg: #FFFFFF;
+  --card-bg-secondary: #F4F6FB;
   --card-border: rgba(30, 58, 95, 0.06);
   
   /* Texto */

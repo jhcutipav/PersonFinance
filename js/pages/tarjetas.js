@@ -57,27 +57,54 @@ const Tarjetas = {
    * Selector horizontal con todas las tarjetas + botón agregar
    */
   renderSelector(tarjetas) {
-    const items = tarjetas.map(t => {
-      const activa = t.id === this.tarjetaSeleccionadaId;
-      const numTrans = API.obtenerTransaccionesTarjeta(t.id).length;
+    const usuario = API.obtenerUsuario();
+    const idxActiva = tarjetas.findIndex(t => t.id === this.tarjetaSeleccionadaId);
+    const indice = idxActiva >= 0 ? idxActiva : 0;
+    
+    // Slides
+    const slides = tarjetas.map((tarjeta, i) => {
+      const claseSlide = this.calcularClaseSlide(i, indice, tarjetas.length);
       return `
-        <button class="tarjeta-selector-item ${activa ? 'active' : ''}" data-tarjeta-id="${t.id}">
-          <span>💳</span>
-          <span>${t.nombre}</span>
-          <span class="badge-mini">${numTrans}</span>
-        </button>
+        <div class="card-slide ${claseSlide}" data-tarj-index="${i}" data-tarjeta-id="${tarjeta.id}">
+          ${TarjetaVisualComp.render(tarjeta, usuario)}
+        </div>
       `;
     }).join('');
     
+    // Indicadores
+    const indicadores = tarjetas.map((_, i) => `
+      <button class="indicator-dot ${i === indice ? 'active' : ''}" data-tarj-slide="${i}"></button>
+    `).join('');
+    
+    // Flechas (solo si hay más de 1)
+    const flechas = tarjetas.length > 1 ? `
+      <button class="card-nav-btn prev" id="tarjPrev" aria-label="Anterior">‹</button>
+      <button class="card-nav-btn next" id="tarjNext" aria-label="Siguiente">›</button>
+    ` : '';
+    
     return `
-      <div class="tarjeta-selector">
-        ${items}
-        <button class="tarjeta-selector-item" id="btnAgregarTarjeta" style="border-style:dashed;">
-          <span>+</span>
-          <span>Agregar tarjeta</span>
-        </button>
+      <div class="cards-slider">
+        ${flechas}
+        <div class="cards-track" id="tarjTrack">${slides}</div>
+      </div>
+      ${tarjetas.length > 1 ? `<div class="cards-indicators" style="margin-bottom: var(--space-md);">${indicadores}</div>` : ''}
+      
+      <div style="text-align:center;margin-bottom:var(--space-md);">
+        <button class="btn-secondary" id="btnAgregarTarjeta">+ Agregar tarjeta</button>
       </div>
     `;
+  },
+  
+  /**
+   * Calcula la clase CSS según la posición relativa al activo
+   */
+  calcularClaseSlide(index, activoIndex, total) {
+    if (index === activoIndex) return 'is-active';
+    const diff = index - activoIndex;
+    if (diff === -1) return 'is-prev';
+    if (diff === 1) return 'is-next';
+    if (diff < -1) return 'is-far-prev';
+    return 'is-far-next';
   },
   
   /**
@@ -98,15 +125,11 @@ const Tarjetas = {
     const porcentajeUsado = (tarjeta.saldoUsado / tarjeta.lineaCredito) * 100;
     
     return `
-      <!-- Tarjeta visual hero -->
-      <div class="glass-card tarjeta-hero">
-        ${TarjetaVisualComp.render(tarjeta, usuario)}
-        
-        <div class="tarjeta-hero-actions">
-          <button class="btn-primary" id="btnPagarTarjeta">💵 Pagar tarjeta</button>
-          <button class="btn-secondary" id="btnEditarTarjeta">⚙️ Configurar</button>
-          <button class="btn-secondary" id="btnNuevoConsumo">+ Nuevo consumo</button>
-        </div>
+      <!-- Acciones (la tarjeta visual está en el slider de arriba) -->
+      <div style="display:flex;gap:var(--space-sm);justify-content:center;flex-wrap:wrap;margin-bottom:var(--space-md);">
+        <button class="btn-primary" id="btnPagarTarjeta">💵 Pagar tarjeta</button>
+        <button class="btn-secondary" id="btnEditarTarjeta">⚙️ Configurar</button>
+        <button class="btn-secondary" id="btnNuevoConsumo">+ Nuevo consumo</button>
       </div>
       
       <!-- Stats -->
@@ -297,14 +320,76 @@ const Tarjetas = {
   
   /* ============ EVENTOS ============ */
   configurarEventos() {
-    // Selector de tarjeta
-    document.querySelectorAll('.tarjeta-selector-item[data-tarjeta-id]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.tarjetaSeleccionadaId = parseInt(btn.dataset.tarjetaId);
-        this.cicloVisualizando = 'actual'; // reset
+    const tarjetas = API.obtenerTarjetas();
+    
+    // Click en una tarjeta del slider → cambiar de tarjeta seleccionada
+    document.querySelectorAll('.card-slide[data-tarjeta-id]').forEach(slide => {
+      slide.addEventListener('click', () => {
+        if (slide.classList.contains('is-active')) return; // ya está seleccionada
+        const tarjId = parseInt(slide.dataset.tarjetaId);
+        this.tarjetaSeleccionadaId = tarjId;
+        this.cicloVisualizando = 'actual';
         this.refrescar();
       });
     });
+    
+    // Flechas del slider
+    const idxActiva = tarjetas.findIndex(t => t.id === this.tarjetaSeleccionadaId);
+    const btnPrev = document.getElementById('tarjPrev');
+    const btnNext = document.getElementById('tarjNext');
+    
+    if (btnPrev) {
+      btnPrev.disabled = (idxActiva <= 0);
+      btnPrev.addEventListener('click', () => {
+        if (idxActiva > 0) {
+          this.tarjetaSeleccionadaId = tarjetas[idxActiva - 1].id;
+          this.cicloVisualizando = 'actual';
+          this.refrescar();
+        }
+      });
+    }
+    
+    if (btnNext) {
+      btnNext.disabled = (idxActiva >= tarjetas.length - 1);
+      btnNext.addEventListener('click', () => {
+        if (idxActiva < tarjetas.length - 1) {
+          this.tarjetaSeleccionadaId = tarjetas[idxActiva + 1].id;
+          this.cicloVisualizando = 'actual';
+          this.refrescar();
+        }
+      });
+    }
+    
+    // Indicadores
+    document.querySelectorAll('.indicator-dot[data-tarj-slide]').forEach(dot => {
+      dot.addEventListener('click', () => {
+        const idx = parseInt(dot.dataset.tarjSlide);
+        if (tarjetas[idx]) {
+          this.tarjetaSeleccionadaId = tarjetas[idx].id;
+          this.cicloVisualizando = 'actual';
+          this.refrescar();
+        }
+      });
+    });
+    
+    // Swipe táctil
+    const track = document.getElementById('tarjTrack');
+    if (track && tarjetas.length > 1) {
+      let startX = 0;
+      track.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; }, { passive: true });
+      track.addEventListener('touchend', (e) => {
+        const diff = startX - e.changedTouches[0].screenX;
+        if (Math.abs(diff) < 50) return;
+        const ix = tarjetas.findIndex(t => t.id === this.tarjetaSeleccionadaId);
+        if (diff > 0 && ix < tarjetas.length - 1) {
+          this.tarjetaSeleccionadaId = tarjetas[ix + 1].id;
+          this.refrescar();
+        } else if (diff < 0 && ix > 0) {
+          this.tarjetaSeleccionadaId = tarjetas[ix - 1].id;
+          this.refrescar();
+        }
+      }, { passive: true });
+    }
     
     // Botón agregar tarjeta
     const btnAdd = document.getElementById('btnAgregarTarjeta');

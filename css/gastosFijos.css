@@ -1,0 +1,416 @@
+/* ============================================
+   PÁGINA: GASTOS FIJOS Y SUSCRIPCIONES
+   ============================================ */
+
+.gastos-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ============ GRÁFICO DE VARIACIÓN ============ */
+.grafico-variacion-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.grafico-variacion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.grafico-variacion-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.grafico-variacion-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.grafico-variacion-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vista-pill {
+  padding: 6px 14px;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.vista-pill:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.vista-pill.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #0A0E1A;
+}
+
+.grafico-variacion-canvas {
+  height: 280px;
+  width: 100%;
+  position: relative;
+}
+
+/* Stats en la parte superior */
+.gastos-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+}
+
+.gasto-stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gasto-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.gasto-stat-icon.cyan { background: linear-gradient(135deg, #14F0CD, #06B6D4); }
+.gasto-stat-icon.purple { background: linear-gradient(135deg, #8B5CF6, #6366F1); color: white; }
+.gasto-stat-icon.amber { background: linear-gradient(135deg, #F59E0B, #EF4444); color: white; }
+.gasto-stat-icon.green { background: linear-gradient(135deg, #10B981, #14F0CD); color: #0A0E1A; }
+
+.gasto-stat-content { flex: 1; min-width: 0; }
+
+.gasto-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.gasto-stat-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gasto-stat-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* Toolbar con filtros y botón nuevo */
+.gastos-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.gastos-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gasto-filter-pill {
+  padding: 8px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.gasto-filter-pill:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.gasto-filter-pill.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #0A0E1A;
+}
+
+/* Grid de cards de gasto fijo */
+.gastos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-md);
+}
+
+.gasto-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gasto-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.gasto-card.inactivo {
+  opacity: 0.5;
+}
+
+.gasto-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.gasto-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.gasto-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gasto-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.gasto-card-tag {
+  font-size: 0.625rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.gasto-card-tag.suscripcion {
+  background: rgba(139, 92, 246, 0.15);
+  color: #A78BFA;
+}
+
+.gasto-card-tag.fijo {
+  background: rgba(20, 240, 205, 0.15);
+  color: #14F0CD;
+}
+
+.gasto-card-tag.variable {
+  background: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+}
+
+.gasto-card-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.gasto-card-amount {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.gasto-card-amount-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.gasto-card-amount-label {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+/* Sparkline para gastos variables */
+.gasto-sparkline {
+  height: 50px;
+  background: var(--card-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  position: relative;
+}
+
+.gasto-sparkline-label {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  z-index: 1;
+}
+
+/* Footer con próximo cobro y acciones */
+.gasto-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--card-border);
+}
+
+.gasto-next-payment {
+  font-size: 0.75rem;
+}
+
+.gasto-next-payment-label {
+  color: var(--text-tertiary);
+  font-size: 0.6875rem;
+}
+
+.gasto-next-payment-date {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.gasto-next-payment-urgent {
+  color: var(--color-warning);
+}
+
+.gasto-card-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.gasto-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.gasto-action-btn:hover {
+  background: var(--accent-primary);
+  color: #0A0E1A;
+  border-color: var(--accent-primary);
+}
+
+.gasto-action-btn.pay {
+  background: rgba(20, 240, 205, 0.15);
+  color: var(--accent-primary);
+  border-color: rgba(20, 240, 205, 0.3);
+}
+
+.gasto-action-btn.pay:hover {
+  background: var(--accent-primary);
+  color: #0A0E1A;
+}
+
+/* Empty state */
+.gastos-empty {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-tertiary);
+}
+
+.gastos-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: var(--space-md);
+  opacity: 0.5;
+}
+
+.gastos-empty h3 {
+  font-size: 1.125rem;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.gastos-empty p {
+  font-size: 0.875rem;
+  margin-bottom: var(--space-lg);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .gastos-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .gastos-stats-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .gasto-stat-value {
+    font-size: 1rem;
+  }
+  
+  .gastos-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .gastos-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .gastos-filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+  
+  .gasto-filter-pill {
+    flex-shrink: 0;
+  }
+}

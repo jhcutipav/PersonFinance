@@ -21,6 +21,7 @@ const App = {
     this.cargarUsuarioPerfil();
     this.configurarNavegacion();
     this.configurarSidebarMovil();
+    this.configurarSidebarToggle();
     this.configurarSelectorMoneda();
     this.configurarBotonNueva();
     this.configurarBotonReset();
@@ -35,6 +36,28 @@ const App = {
     // 5. Re-renderizar al cambiar tema (para los gráficos)
     document.addEventListener('themeChanged', () => {
       this.cargarPaginaActual();
+    });
+  },
+  
+  /**
+   * Toggle del sidebar (expandido/colapsado) con persistencia
+   */
+  configurarSidebarToggle() {
+    const btn = document.getElementById('sidebarToggle');
+    const container = document.querySelector('.app-container');
+    if (!btn || !container) return;
+    
+    // Cargar estado guardado (default: cerrado)
+    const expandido = localStorage.getItem('finanzapp_sidebar_expanded') === 'true';
+    if (expandido) {
+      container.classList.add('sidebar-expanded');
+    }
+    
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      container.classList.toggle('sidebar-expanded');
+      const ahoraExpandido = container.classList.contains('sidebar-expanded');
+      localStorage.setItem('finanzapp_sidebar_expanded', ahoraExpandido);
     });
   },
   
@@ -104,6 +127,12 @@ const App = {
         break;
       case 'tarjetas':
         Tarjetas.render(container, this.estado.monedaVista);
+        break;
+      case 'gastos-fijos':
+        GastosFijos.render(container, this.estado.monedaVista);
+        break;
+      case 'presupuestos':
+        Presupuestos.render(container, this.estado.monedaVista);
         break;
       default:
         container.innerHTML = `

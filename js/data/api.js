@@ -364,6 +364,120 @@ const API = {
     return presupuestos.filter(p => p.mes === mes && p.anio === anio);
   },
   
+  obtenerPresupuestoPorId(id) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    return presupuestos.find(p => p.id === id);
+  },
+  
+  /**
+   * Calcula cuánto se ha gastado en una categoría (incluyendo subcategorías) en un mes
+   */
+  calcularGastadoEnCategoria(categoriaId, mes, anio, monedaDestino = 'PEN') {
+    const subs = this.obtenerSubcategorias(categoriaId).map(s => s.id);
+    const idsValidos = [categoriaId, ...subs];
+    
+    const trans = (Storage.cargar('transacciones') || []).filter(t => {
+      if (t.tipo !== 'egreso') return false;
+      if (!idsValidos.includes(t.categoriaId)) return false;
+      const fecha = new Date(t.fecha);
+      return fecha.getMonth() + 1 === mes && fecha.getFullYear() === anio;
+    });
+    
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  crearPresupuesto(datos) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    
+    // Verificar si ya existe uno para esa categoría/mes/año
+    const existente = presupuestos.find(p => 
+      p.categoriaId === parseInt(datos.categoriaId) && 
+      p.mes === parseInt(datos.mes) && 
+      p.anio === parseInt(datos.anio)
+    );
+    
+    if (existente) {
+      // Actualizar el existente
+      return this.actualizarPresupuesto(existente.id, datos);
+    }
+    
+    const nuevo = {
+      id: Storage.nuevoId('presupuestos'),
+      categoriaId: parseInt(datos.categoriaId),
+      monto: parseFloat(datos.monto),
+      moneda: datos.moneda || 'PEN',
+      mes: parseInt(datos.mes),
+      anio: parseInt(datos.anio),
+      gastado: 0, // se calcula dinámicamente
+    };
+    presupuestos.push(nuevo);
+    Storage.guardar('presupuestos', presupuestos);
+    return nuevo;
+  },
+  
+  actualizarPresupuesto(id, datos) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    const idx = presupuestos.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    
+    presupuestos[idx] = {
+      ...presupuestos[idx],
+      ...datos,
+      monto: parseFloat(datos.monto || presupuestos[idx].monto),
+      categoriaId: parseInt(datos.categoriaId || presupuestos[idx].categoriaId),
+    };
+    Storage.guardar('presupuestos', presupuestos);
+    return presupuestos[idx];
+  },
+  
+  eliminarPresupuesto(id) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    const filtrados = presupuestos.filter(p => p.id !== id);
+    Storage.guardar('presupuestos', filtrados);
+    return true;
+  },
+  
+  /**
+   * Aplica una plantilla creando varios presupuestos a la vez para el mes/año dados
+   */
+  aplicarPlantillaPresupuestos(plantilla, ingresoEstimado, mes, anio, moneda = 'PEN') {
+    const distribucion = {
+      'cincuenta_treinta_veinte': [
+        { categoriaId: 1, porcentaje: 0.20 }, // Alimentación
+        { categoriaId: 7, porcentaje: 0.25 }, // Vivienda
+        { categoriaId: 4, porcentaje: 0.05 }, // Servicios
+        { categoriaId: 2, porcentaje: 0.10 }, // Transporte
+        { categoriaId: 3, porcentaje: 0.15 }, // Entretenimiento
+        { categoriaId: 5, porcentaje: 0.05 }, // Suscripciones
+        { categoriaId: 6, porcentaje: 0.10 }, // Salud
+        { categoriaId: 8, porcentaje: 0.10 }, // Otros
+      ],
+      'basico': [
+        { categoriaId: 1, porcentaje: 0.30 },
+        { categoriaId: 7, porcentaje: 0.30 },
+        { categoriaId: 2, porcentaje: 0.15 },
+        { categoriaId: 4, porcentaje: 0.10 },
+        { categoriaId: 8, porcentaje: 0.15 },
+      ],
+    };
+    
+    const items = distribucion[plantilla] || [];
+    let creados = 0;
+    
+    items.forEach(item => {
+      this.crearPresupuesto({
+        categoriaId: item.categoriaId,
+        monto: ingresoEstimado * item.porcentaje,
+        moneda,
+        mes,
+        anio,
+      });
+      creados++;
+    });
+    
+    return creados;
+  },
+  
   /* ========== CÁLCULOS AGREGADOS ========== */
   calcularSaldoTotal(monedaDestino = 'PEN') {
     const cuentas = this.obtenerCuentas().filter(c => c.tipo !== 'credito');
@@ -556,6 +670,164 @@ const API = {
     }
     
     return nuevaTrans;
+  },
+  
+  /* ========== GASTOS FIJOS ========== */
+  obtenerGastosFijos(filtros = {}) {
+    let gastos = Storage.cargar('gastosFijos') || [];
+    
+    if (filtros.activos === true) {
+      gastos = gastos.filter(g => g.activo);
+    }
+    
+    if (filtros.esSuscripcion !== undefined) {
+      gastos = gastos.filter(g => g.esSuscripcion === filtros.esSuscripcion);
+    }
+    
+    if (filtros.tipo) {
+      gastos = gastos.filter(g => g.tipo === filtros.tipo);
+    }
+    
+    return gastos;
+  },
+  
+  obtenerGastoFijoPorId(id) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    return gastos.find(g => g.id === id);
+  },
+  
+  crearGastoFijo(datos) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const cat = this.obtenerCategoriaPorId(datos.categoriaId);
+    
+    const nuevo = {
+      id: Storage.nuevoId('gastosFijos'),
+      nombre: datos.nombre,
+      tipo: datos.tipo || 'fijo',
+      esSuscripcion: datos.esSuscripcion || false,
+      categoriaId: parseInt(datos.categoriaId),
+      cuentaId: parseInt(datos.cuentaId),
+      monto: parseFloat(datos.monto),
+      moneda: datos.moneda || 'PEN',
+      frecuencia: datos.frecuencia || 'mensual',
+      diaCobro: parseInt(datos.diaCobro),
+      icono: datos.icono || (cat ? cat.icono : '💰'),
+      color: datos.color || (cat ? cat.color : 'blue'),
+      activo: true,
+      historico: [],
+    };
+    gastos.push(nuevo);
+    Storage.guardar('gastosFijos', gastos);
+    return nuevo;
+  },
+  
+  actualizarGastoFijo(id, datos) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const idx = gastos.findIndex(g => g.id === id);
+    if (idx === -1) return null;
+    
+    gastos[idx] = {
+      ...gastos[idx],
+      ...datos,
+      monto: parseFloat(datos.monto || gastos[idx].monto),
+      diaCobro: parseInt(datos.diaCobro || gastos[idx].diaCobro),
+      categoriaId: parseInt(datos.categoriaId || gastos[idx].categoriaId),
+      cuentaId: parseInt(datos.cuentaId || gastos[idx].cuentaId),
+    };
+    Storage.guardar('gastosFijos', gastos);
+    return gastos[idx];
+  },
+  
+  eliminarGastoFijo(id) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const filtrados = gastos.filter(g => g.id !== id);
+    Storage.guardar('gastosFijos', filtrados);
+    return true;
+  },
+  
+  /**
+   * Marca un gasto fijo como pagado: crea la transacción y agrega al histórico
+   */
+  marcarGastoComoPagado(id, datos = {}) {
+    const gasto = this.obtenerGastoFijoPorId(id);
+    if (!gasto) throw new Error('Gasto no encontrado');
+    
+    const monto = parseFloat(datos.monto || gasto.monto);
+    const fecha = datos.fecha || new Date().toISOString().split('T')[0];
+    
+    // 1. Crear transacción
+    const nuevaTrans = this.crearTransaccion({
+      cuentaId: gasto.cuentaId,
+      categoriaId: gasto.categoriaId,
+      tipo: 'egreso',
+      monto: monto,
+      descripcion: gasto.nombre,
+      fecha: fecha,
+    });
+    
+    // 2. Agregar al histórico
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const idx = gastos.findIndex(g => g.id === id);
+    if (idx !== -1) {
+      if (!gastos[idx].historico) gastos[idx].historico = [];
+      gastos[idx].historico.push({
+        fecha,
+        monto,
+        pagado: true,
+        transaccionId: nuevaTrans.id,
+      });
+      // Limitar histórico a últimos 12
+      if (gastos[idx].historico.length > 12) {
+        gastos[idx].historico = gastos[idx].historico.slice(-12);
+      }
+      Storage.guardar('gastosFijos', gastos);
+    }
+    
+    return nuevaTrans;
+  },
+  
+  /**
+   * Calcula el promedio del histórico de un gasto variable
+   */
+  calcularPromedio(gasto) {
+    if (!gasto.historico || gasto.historico.length === 0) return gasto.monto;
+    const suma = gasto.historico.reduce((s, h) => s + h.monto, 0);
+    return suma / gasto.historico.length;
+  },
+  
+  /**
+   * Total mensual de gastos fijos en una moneda dada
+   */
+  calcularTotalGastosFijos(monedaDestino = 'PEN') {
+    const gastos = this.obtenerGastosFijos({ activos: true });
+    return Formato.sumarEnMoneda(gastos, monedaDestino);
+  },
+  
+  /**
+   * Próximos vencimientos en los próximos N días
+   */
+  obtenerProximosVencimientos(diasLimite = 30) {
+    const gastos = this.obtenerGastosFijos({ activos: true });
+    const hoy = new Date();
+    const items = [];
+    
+    gastos.forEach(g => {
+      if (g.frecuencia !== 'mensual') return; // simplificación: solo mensuales por ahora
+      
+      const proximaFecha = Fechas.proximoDiaDelMes(g.diaCobro);
+      const diasFaltan = Fechas.diasHasta(proximaFecha);
+      
+      if (diasFaltan >= 0 && diasFaltan <= diasLimite) {
+        items.push({
+          ...g,
+          proximaFecha,
+          diasFaltan,
+        });
+      }
+    });
+    
+    items.sort((a, b) => a.diasFaltan - b.diasFaltan);
+    return items;
   },
   
   /* ========== UTILIDADES ========== */
