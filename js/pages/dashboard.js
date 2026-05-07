@@ -1,134 +1,133 @@
 /* ============================================
-   PÁGINA: DASHBOARD (REDISEÑO)
-   Layout 3 columnas con gráficos
+   PÁGINA: DASHBOARD (Estilo referencia Cryptoline)
    ============================================ */
 
 const Dashboard = {
   
   tarjetaActiva: 0,
   monedaVista: 'PEN',
+  tabActiva: 'activity', // activity | spending | income
+  historyTab: 'history', // history | upcoming
   
   render(container, monedaVista = 'PEN') {
     this.monedaVista = monedaVista;
-    
-    // Destruir gráficos previos
     Graficos.destruirTodos();
     
     container.innerHTML = `
       <div class="dashboard-layout">
         <div class="dashboard-main">
-          ${this.renderHeroBanner()}
-          ${this.renderSummary()}
-          ${this.renderCarruselTarjetas()}
-          ${this.renderGraficos()}
+          ${this.renderGreeting()}
+          ${this.renderStatsConTarjeta()}
+          ${this.renderSummaryTabs()}
+          <div id="summaryContent">
+            ${this.renderActivityContent()}
+          </div>
         </div>
+        
         <aside class="dashboard-aside">
-          ${this.renderAsideStats()}
-          ${this.renderAsideMovimientos()}
-          ${this.renderAsidePagoTarjeta()}
+          ${this.renderPortfolio()}
+          ${this.renderFavorites()}
+          ${this.renderUpcoming()}
         </aside>
       </div>
     `;
     
-    // Renderizar gráficos después de que el DOM esté listo
     setTimeout(() => {
-      Graficos.gastosDiarios('chartGastosDiarios');
-      Graficos.ingresosVsEgresos('chartIngresosEgresos');
-      Graficos.distribucionCategorias('chartCategorias', 'chartCategoriasLeyenda');
-      Graficos.tendenciaAhorro('chartTendencia');
+      Graficos.gastosDiarios('chartActivity');
+      this.renderSparklinesFavorites();
+      this.renderSparklinesUpcoming();
     }, 50);
     
-    // Configurar carrusel
+    this.configurarEventos();
     this.configurarSlider();
   },
   
-  /* ============ BANNER HERO ============ */
-  renderHeroBanner() {
+  /* ============ SALUDO ============ */
+  renderGreeting() {
     const usuario = API.obtenerUsuario();
-    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
-    const ingresos = API.calcularIngresosMes(moneda);
-    const ahorro = API.calcularAhorroMes(moneda);
-    const tasaAhorro = ingresos > 0 ? (ahorro / ingresos) * 100 : 0;
+    const hora = new Date().getHours();
+    let saludo = 'Buenos días';
+    if (hora >= 12 && hora < 19) saludo = 'Buenas tardes';
+    else if (hora >= 19 || hora < 6) saludo = 'Buenas noches';
     
-    let mensajeMotivacional = '';
-    if (tasaAhorro >= 30) {
-      mensajeMotivacional = `🎯 ¡Excelente! Llevas ${Math.round(tasaAhorro)}% de ahorro este mes`;
-    } else if (tasaAhorro >= 10) {
-      mensajeMotivacional = `📊 Vas bien, llevas ${Math.round(tasaAhorro)}% de ahorro este mes`;
-    } else if (tasaAhorro > 0) {
-      mensajeMotivacional = `💪 Sigue así, ${Math.round(tasaAhorro)}% de ahorro este mes`;
-    } else {
-      mensajeMotivacional = `📈 Aquí tienes tu resumen financiero de ${Fechas.mesActual()}`;
-    }
+    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito');
     
     return `
-      <div class="hero-banner">
-        <div class="hero-banner-content">
-          <div class="hero-banner-title">¡Bienvenido, ${usuario.nombre}! ✨</div>
-          <div class="hero-banner-subtitle">${mensajeMotivacional}</div>
+      <div class="greeting-bar">
+        <div class="greeting-left">
+          <div class="greeting-avatar">${usuario.nombre.charAt(0).toUpperCase()}</div>
+          <div class="greeting-text">${saludo}, ${usuario.nombre}!</div>
         </div>
-        <div class="hero-banner-illustration">
-          💰📊
+        
+        <div class="wallet-selector">
+          <select class="wallet-select">
+            <option value="">Todas las cuentas</option>
+            ${cuentas.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('')}
+          </select>
+          <button class="wallet-action-btn" onclick="TransaccionForm.abrir(null, () => App.cargarPaginaActual())" title="Nueva transacción">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          </button>
         </div>
       </div>
     `;
   },
   
-  /* ============ SUMMARY (4 cards de stats) ============ */
-  renderSummary() {
+  /* ============ STATS + TARJETA ============ */
+  renderStatsConTarjeta() {
     const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
     
     const saldo = API.calcularSaldoTotal(moneda);
     const ingresos = API.calcularIngresosMes(moneda);
     const egresos = API.calcularEgresosMes(moneda);
     const ahorro = API.calcularAhorroMes(moneda);
-    const tasaAhorro = ingresos > 0 ? (ahorro / ingresos) : 0;
     
     return `
-      <div class="summary-grid">
-        <div class="glass-card summary-card">
-          <div class="label">
-            <div class="icon-box blue">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+      <div class="stats-card-zone">
+        <div class="stats-left">
+          <div class="stat-card">
+            <div class="stat-card-icon cyan">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
             </div>
-            Saldo total
+            <div class="stat-card-info">
+              <div class="stat-card-label">Saldo total</div>
+              <div class="stat-card-value">${Formato.formatearMoneda(saldo, moneda)}</div>
+            </div>
           </div>
-          <div class="amount">${Formato.formatearMoneda(saldo, moneda)}</div>
-          <div class="change positive">↑ Todas las cuentas</div>
+          
+          <div class="stat-card">
+            <div class="stat-card-icon purple">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+            </div>
+            <div class="stat-card-info">
+              <div class="stat-card-label">Ahorro del mes</div>
+              <div class="stat-card-value">${Formato.formatearMoneda(ahorro, moneda)}</div>
+            </div>
+          </div>
         </div>
         
-        <div class="glass-card summary-card">
-          <div class="label">
-            <div class="icon-box green">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-            </div>
-            Ingresos
-          </div>
-          <div class="amount">${Formato.formatearMoneda(ingresos, moneda)}</div>
-          <div class="change positive">${Fechas.mesActual()}</div>
+        <div class="stats-card-center">
+          ${this.renderCarruselTarjetas()}
         </div>
         
-        <div class="glass-card summary-card">
-          <div class="label">
-            <div class="icon-box red">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+        <div class="stats-right">
+          <div class="stat-card">
+            <div class="stat-card-icon green">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
             </div>
-            Egresos
-          </div>
-          <div class="amount">${Formato.formatearMoneda(egresos, moneda)}</div>
-          <div class="change negative">${Fechas.mesActual()}</div>
-        </div>
-        
-        <div class="glass-card summary-card">
-          <div class="label">
-            <div class="icon-box amber">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+            <div class="stat-card-info">
+              <div class="stat-card-label">Egresos</div>
+              <div class="stat-card-value">${Formato.formatearMoneda(egresos, moneda)}</div>
             </div>
-            Ahorro
           </div>
-          <div class="amount">${Formato.formatearMoneda(ahorro, moneda)}</div>
-          <div class="change ${ahorro >= 0 ? 'positive' : 'negative'}">
-            ${Formato.formatearPorcentaje(tasaAhorro)} de ingresos
+          
+          <div class="stat-card">
+            <div class="stat-card-icon blue">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div class="stat-card-info">
+              <div class="stat-card-label">Ingresos</div>
+              <div class="stat-card-value">${Formato.formatearMoneda(ingresos, moneda)}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -142,12 +141,10 @@ const Dashboard = {
     
     if (tarjetas.length === 0) {
       return `
-        <div class="glass-card">
-          <h3 class="glass-card-title">Tarjetas de crédito</h3>
-          <div style="text-align:center;padding:var(--space-xl);color:var(--text-tertiary);">
-            <div style="font-size:3rem;margin-bottom:var(--space-md);opacity:0.5;">💳</div>
-            <p>No tienes tarjetas registradas</p>
-          </div>
+        <div style="background:var(--card-bg);border:1px dashed var(--card-border);border-radius:var(--radius-lg);padding:var(--space-lg);text-align:center;color:var(--text-tertiary);">
+          <div style="font-size:2.5rem;opacity:0.4;margin-bottom:8px;">💳</div>
+          <p style="font-size:0.8125rem;">Sin tarjetas registradas</p>
+          <button class="btn-primary" style="margin-top:12px;" onclick="App.navegarA('tarjetas')">Agregar tarjeta</button>
         </div>
       `;
     }
@@ -174,19 +171,11 @@ const Dashboard = {
     ` : '';
     
     return `
-      <div class="glass-card">
-        <div class="glass-card-header">
-          <h3 class="glass-card-title">Mis tarjetas de crédito</h3>
-          <span class="glass-card-meta" id="cardCounter">${this.tarjetaActiva + 1} de ${tarjetas.length}</span>
-        </div>
-        
-        <div class="cards-slider">
-          ${flechas}
-          <div class="cards-track" id="cardsTrack">${slides}</div>
-        </div>
-        
-        ${tarjetas.length > 1 ? `<div class="cards-indicators">${indicadores}</div>` : ''}
+      <div class="cards-slider">
+        ${flechas}
+        <div class="cards-track" id="cardsTrack">${slides}</div>
       </div>
+      ${tarjetas.length > 1 ? `<div class="cards-indicators">${indicadores}</div>` : ''}
     `;
   },
   
@@ -209,15 +198,12 @@ const Dashboard = {
     const btnPrev = document.getElementById('cardPrev');
     const btnNext = document.getElementById('cardNext');
     const indicators = document.querySelectorAll('.indicator-dot');
-    const counter = document.getElementById('cardCounter');
     
     const irASlide = (index) => {
       if (index < 0 || index >= tarjetas.length) return;
       this.tarjetaActiva = index;
       this.actualizarClasesSlides(tarjetas.length);
-      
       indicators.forEach((dot, i) => dot.classList.toggle('active', i === index));
-      if (counter) counter.textContent = `${index + 1} de ${tarjetas.length}`;
       if (btnPrev) btnPrev.disabled = (index === 0);
       if (btnNext) btnNext.disabled = (index === tarjetas.length - 1);
     };
@@ -236,7 +222,6 @@ const Dashboard = {
       });
     });
     
-    // Swipe táctil
     let startX = 0;
     track.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; }, { passive: true });
     track.addEventListener('touchend', (e) => {
@@ -258,145 +243,251 @@ const Dashboard = {
     });
   },
   
-  /* ============ GRÁFICOS (4) ============ */
-  renderGraficos() {
+  /* ============ TABS ============ */
+  renderSummaryTabs() {
     return `
-      <div class="charts-grid">
-        
-        <!-- Gráfico 1: Gastos diarios del mes -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title-block">
-              <div class="chart-title">Gastos diarios</div>
-              <div class="chart-subtitle">${Fechas.mesActual()}</div>
-            </div>
-            <button class="chart-period-pill">Mensual</button>
-          </div>
-          <div class="chart-canvas-wrapper">
-            <canvas id="chartGastosDiarios"></canvas>
-          </div>
-        </div>
-        
-        <!-- Gráfico 2: Ingresos vs Egresos -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title-block">
-              <div class="chart-title">Ingresos vs Egresos</div>
-              <div class="chart-subtitle">Últimos 6 meses</div>
-            </div>
-            <button class="chart-period-pill">6 meses</button>
-          </div>
-          <div class="chart-canvas-wrapper">
-            <canvas id="chartIngresosEgresos"></canvas>
-          </div>
-        </div>
-        
-        <!-- Gráfico 3: Distribución por categoría (donut) -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title-block">
-              <div class="chart-title">Distribución de egresos</div>
-              <div class="chart-subtitle">Por categoría · ${Fechas.mesActual()}</div>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:140px 1fr;gap:var(--space-md);align-items:center;">
-            <div style="position:relative;width:140px;height:140px;">
-              <canvas id="chartCategorias"></canvas>
-            </div>
-            <div class="chart-legend" id="chartCategoriasLeyenda"></div>
-          </div>
-        </div>
-        
-        <!-- Gráfico 4: Tendencia de ahorro -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title-block">
-              <div class="chart-title">Tendencia de ahorro</div>
-              <div class="chart-subtitle">Acumulado · 6 meses</div>
-            </div>
-            <button class="chart-period-pill">Anual</button>
-          </div>
-          <div class="chart-canvas-wrapper">
-            <canvas id="chartTendencia"></canvas>
-          </div>
-        </div>
-        
+      <div class="summary-tabs">
+        <button class="summary-tab ${this.tabActiva === 'activity' ? 'active' : ''}" data-tab="activity">Resumen Actividad</button>
+        <button class="summary-tab ${this.tabActiva === 'spending' ? 'active' : ''}" data-tab="spending">Resumen Egresos</button>
+        <button class="summary-tab ${this.tabActiva === 'income' ? 'active' : ''}" data-tab="income">Resumen Ingresos</button>
       </div>
     `;
   },
   
-  /* ============ ASIDE DERECHO ============ */
-  renderAsideStats() {
+  /* ============ ACTIVITY CONTENT ============ */
+  renderActivityContent() {
+    return `
+      <div class="activity-grid">
+        <div class="activity-left">
+          ${this.renderActivityGraph()}
+          ${this.renderShortcuts()}
+        </div>
+        <div class="activity-right">
+          ${this.renderHistory()}
+        </div>
+      </div>
+    `;
+  },
+  
+  renderActivityGraph() {
     const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    let total = 0;
+    let titulo = 'Egresos';
+    
+    if (this.tabActiva === 'income') {
+      total = API.calcularIngresosMes(moneda);
+      titulo = 'Ingresos';
+    } else if (this.tabActiva === 'spending') {
+      total = API.calcularEgresosMes(moneda);
+      titulo = 'Egresos';
+    } else {
+      total = API.calcularEgresosMes(moneda);
+      titulo = 'Actividad';
+    }
+    
     const ahora = new Date();
+    const inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    const rango = `${Fechas.formatoCorto(inicio)} - ${Fechas.formatoCorto(ahora)}`;
     
-    const numTransMes = API.obtenerTransacciones({
-      mes: ahora.getMonth() + 1,
-      anio: ahora.getFullYear(),
-    }).length;
+    return `
+      <div class="activity-graph-card">
+        <div class="activity-graph-header">
+          <div>
+            <div class="activity-graph-title">${titulo} del mes</div>
+            <div class="activity-graph-amount">${Formato.formatearMoneda(total, moneda)}</div>
+          </div>
+          <div class="activity-graph-period">Entre<br>${rango}</div>
+        </div>
+        <div class="activity-graph-canvas">
+          <canvas id="chartActivity"></canvas>
+        </div>
+      </div>
+    `;
+  },
+  
+  renderShortcuts() {
+    const items = [
+      { icon: '🎯', name: 'Metas', color: 'orange', page: 'metas' },
+      { icon: '📅', name: 'Plan mensual', color: 'cyan', page: 'presupuestos' },
+      { icon: '⚙️', name: 'Configuración', color: 'purple', page: 'configuracion' },
+      { icon: '↔️', name: 'Transferencias', color: 'green', page: 'transferencias' },
+    ];
     
-    const mesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
-    const numTransMesAnt = API.obtenerTransacciones({
-      mes: mesAnterior.getMonth() + 1,
-      anio: mesAnterior.getFullYear(),
-    }).length;
+    return `
+      <div class="shortcuts-list">
+        ${items.map(it => `
+          <div class="shortcut-card" onclick="App.navegarA('${it.page}')">
+            <div class="shortcut-icon ${it.color}">${it.icon}</div>
+            <div class="shortcut-name">${it.name}</div>
+            <div class="shortcut-arrow">›</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  },
+  
+  renderHistory() {
+    const trans = API.obtenerTransacciones({ limite: 10 });
+    
+    // Agrupar por día
+    const grupos = {};
+    trans.forEach(t => {
+      const key = t.fecha;
+      if (!grupos[key]) grupos[key] = [];
+      grupos[key].push(t);
+    });
+    
+    let listaHTML = '';
+    if (Object.keys(grupos).length === 0) {
+      listaHTML = `
+        <div style="text-align:center;padding:var(--space-xl);color:var(--text-tertiary);font-size:0.875rem;">
+          Sin movimientos aún
+        </div>
+      `;
+    } else {
+      Object.entries(grupos).forEach(([fecha, items]) => {
+        const fechaObj = new Date(fecha);
+        const labelFecha = `${fechaObj.getDate()} ${Fechas.MESES_CORTOS[fechaObj.getMonth()]}, ${fechaObj.getFullYear()}`;
+        
+        listaHTML += `
+          <div class="history-day-group">
+            <div class="history-day-label">${labelFecha}</div>
+            ${items.map(t => this.renderHistoryItem(t)).join('')}
+          </div>
+        `;
+      });
+    }
+    
+    return `
+      <div class="history-tabs">
+        <button class="history-tab ${this.historyTab === 'history' ? 'active' : ''}" data-history-tab="history">Historial</button>
+        <button class="history-tab ${this.historyTab === 'upcoming' ? 'active' : ''}" data-history-tab="upcoming">Próximos</button>
+        <div class="history-date-selector">
+          <div class="history-date-pill">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>${Fechas.mesActual()} ${new Date().getFullYear()}</span>
+          </div>
+        </div>
+      </div>
+      ${listaHTML}
+    `;
+  },
+  
+  renderHistoryItem(trans) {
+    const cat = API.obtenerCategoriaPorId(trans.categoriaId);
+    const cuenta = API.obtenerCuentaPorId(trans.cuentaId);
+    const esIngreso = trans.tipo === 'ingreso';
+    const signo = esIngreso ? '+' : '-';
+    const cls = esIngreso ? 'positive' : 'negative';
+    const fechaObj = new Date(trans.fecha);
+    const hora = `${fechaObj.getDate()} ${Fechas.MESES_CORTOS[fechaObj.getMonth()]}, ${fechaObj.getFullYear()}`;
+    
+    return `
+      <div class="history-item" onclick="Transacciones.abrirModal(${trans.id})">
+        <div class="history-item-icon icon-box ${cat ? cat.color : 'blue'}">
+          <span style="font-size:16px;">${cat ? cat.icono : '💰'}</span>
+        </div>
+        <div class="history-item-info">
+          <div class="history-item-name">${trans.descripcion || (cat ? cat.nombre : 'Movimiento')}</div>
+          <div class="history-item-meta">${hora}</div>
+        </div>
+        <div class="history-item-tag">${cat ? cat.nombre : 'Otro'}</div>
+        <div class="history-item-amount ${cls}">
+          ${signo}${Formato.formatearMoneda(trans.monto, trans.moneda)}
+        </div>
+      </div>
+    `;
+  },
+  
+  /* ============ ASIDE: PORTFOLIO ============ */
+  renderPortfolio() {
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    const saldo = API.calcularSaldoTotal(moneda);
+    
+    // Calcular cambio vs mes anterior (simulado: ahorro acumulado)
+    const ingresos = API.calcularIngresosMes(moneda);
+    const egresos = API.calcularEgresosMes(moneda);
+    const cambio = ingresos > 0 ? ((ingresos - egresos) / ingresos * 100) : 0;
     
     return `
       <div class="aside-card">
         <div class="aside-card-header">
-          <div class="aside-card-title">Actividad</div>
-          <span class="aside-card-link">Ver historial →</span>
+          <div class="aside-card-titles">
+            <div class="aside-card-title">Mi Patrimonio</div>
+            <div class="aside-card-subtitle">Crece tus ingresos</div>
+          </div>
+          <div class="aside-card-actions">
+            <button class="aside-icon-btn" title="Buscar">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </button>
+            <button class="aside-icon-btn" title="Notificaciones">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            </button>
+          </div>
         </div>
         
-        <div class="aside-stats-row">
-          <div class="aside-stat">
-            <div class="aside-stat-icon" style="background: rgba(59, 130, 246, 0.15); color: #60A5FA;">📊</div>
-            <div class="aside-stat-value">${numTransMesAnt}</div>
-            <div class="aside-stat-label">Mes anterior</div>
-          </div>
-          <div class="aside-stat">
-            <div class="aside-stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #34D399;">✓</div>
-            <div class="aside-stat-value">${numTransMes}</div>
-            <div class="aside-stat-label">Este mes</div>
-          </div>
+        <div class="portfolio-amount">${Formato.formatearMoneda(saldo, moneda)}</div>
+        <div class="portfolio-change ${cambio >= 0 ? 'positive' : 'negative'}">
+          ${cambio >= 0 ? '↑' : '↓'} ${Math.abs(cambio).toFixed(1)}% este mes
+        </div>
+        
+        <div class="portfolio-actions">
+          <button class="portfolio-btn primary" onclick="TransaccionForm.abrir(null, () => App.cargarPaginaActual())">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            Ingreso
+          </button>
+          <button class="portfolio-btn secondary" onclick="TransaccionForm.abrir(null, () => App.cargarPaginaActual())">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
+            Egreso
+          </button>
         </div>
       </div>
     `;
   },
   
-  renderAsideMovimientos() {
-    const movimientos = API.obtenerTransacciones({ limite: 5 });
+  /* ============ ASIDE: FAVORITES (cuentas) ============ */
+  renderFavorites() {
+    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito').slice(0, 4);
     
-    if (movimientos.length === 0) {
+    if (cuentas.length === 0) {
       return `
         <div class="aside-card">
           <div class="aside-card-header">
-            <div class="aside-card-title">Movimientos recientes</div>
+            <div class="aside-card-titles">
+              <div class="aside-card-title">Mis cuentas</div>
+            </div>
           </div>
-          <div style="text-align:center;padding:var(--space-md);color:var(--text-tertiary);font-size:0.8125rem;">
-            Sin movimientos
+          <div style="text-align:center;color:var(--text-tertiary);font-size:0.8125rem;padding:var(--space-md);">
+            Sin cuentas registradas
           </div>
         </div>
       `;
     }
     
-    const items = movimientos.map(t => {
-      const cat = API.obtenerCategoriaPorId(t.categoriaId);
-      const esIngreso = t.tipo === 'ingreso';
-      const signo = esIngreso ? '+' : '-';
-      const cls = esIngreso ? 'positive' : 'negative';
+    const colores = ['#8B5CF6', '#10B981', '#F59E0B', '#06B6D4'];
+    
+    const cards = cuentas.slice(0, 2).map((c, i) => {
+      const inicial = c.nombre.charAt(0).toUpperCase();
+      const tipoLabel = c.tipo === 'efectivo' ? 'EF' : c.tipo === 'billetera' ? 'BL' : 'BANK';
+      const cambio = (Math.random() * 4 - 1).toFixed(2); // simulado
       
       return `
-        <div class="aside-movement">
-          <div class="icon-box ${cat ? cat.color : 'blue'}">
-            <span style="font-size:16px;">${cat ? cat.icono : '💰'}</span>
+        <div class="favorite-card">
+          <div class="favorite-header">
+            <div class="favorite-icon" style="background: ${colores[i % colores.length]};">${inicial}</div>
+            <div>
+              <div class="favorite-name">${c.nombre.length > 10 ? c.nombre.substring(0, 10) + '...' : c.nombre}</div>
+              <div class="favorite-symbol">${tipoLabel}</div>
+            </div>
           </div>
-          <div class="aside-movement-info">
-            <div class="aside-movement-name">${t.descripcion || (cat ? cat.nombre : 'Movimiento')}</div>
-            <div class="aside-movement-meta">${Fechas.formatoCorto(t.fecha)}</div>
+          <div class="favorite-sparkline">
+            <canvas id="sparkFav${c.id}"></canvas>
           </div>
-          <div class="aside-movement-amount ${cls}">
-            ${signo}${Formato.formatearMoneda(t.monto, t.moneda)}
+          <div class="favorite-stats">
+            <span class="favorite-amount">${Formato.formatearMoneda(c.saldo, c.moneda)}</span>
+            <span class="favorite-change ${cambio >= 0 ? 'positive' : 'negative'}">
+              ${cambio >= 0 ? '+' : ''}${cambio}%
+            </span>
           </div>
         </div>
       `;
@@ -405,58 +496,172 @@ const Dashboard = {
     return `
       <div class="aside-card">
         <div class="aside-card-header">
-          <div class="aside-card-title">Movimientos recientes</div>
-          <a href="#transacciones" class="aside-card-link">Ver todos →</a>
+          <div class="aside-card-titles">
+            <div class="aside-card-title">Mis cuentas</div>
+          </div>
+          <a class="aside-card-subtitle" style="color:var(--accent-primary);cursor:pointer;">Ver todas</a>
         </div>
-        ${items}
+        <div class="favorites-grid">
+          ${cards}
+        </div>
       </div>
     `;
   },
   
-  renderAsidePagoTarjeta() {
+  renderSparklinesFavorites() {
+    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito').slice(0, 2);
+    cuentas.forEach((c, i) => {
+      const canvas = document.getElementById(`sparkFav${c.id}`);
+      if (!canvas) return;
+      
+      // Generar puntos aleatorios para el sparkline (simulado)
+      const points = Array.from({ length: 12 }, () => Math.random() * 100 + 50);
+      const trend = Math.random() > 0.3 ? '#14F0CD' : '#EF4444';
+      
+      Graficos.destruir(`sparkFav${c.id}`);
+      const ctx = canvas.getContext('2d');
+      
+      Graficos.instancias[`sparkFav${c.id}`] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: points.map((_, i) => i),
+          datasets: [{
+            data: points,
+            borderColor: trend,
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            tension: 0.4,
+            pointRadius: 0,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false } }
+        }
+      });
+    });
+  },
+  
+  /* ============ ASIDE: UPCOMING (próximos pagos) ============ */
+  renderUpcoming() {
     const tarjetas = API.obtenerTarjetas();
-    if (tarjetas.length === 0) return '';
+    const items = [];
     
-    // Buscar la tarjeta con próximo pago más cercano
-    let proximoPago = null;
-    let tarjetaPago = null;
-    
+    // Próximos pagos de tarjetas
     tarjetas.forEach(t => {
       const ciclo = API.obtenerCicloPendiente(t.id);
-      if (!ciclo) return;
-      
-      if (!proximoPago || new Date(ciclo.fechaPago) < new Date(proximoPago.fechaPago)) {
-        proximoPago = ciclo;
-        tarjetaPago = t;
+      if (ciclo) {
+        const dias = Fechas.diasHasta(ciclo.fechaPago);
+        items.push({
+          tipo: 'tarjeta',
+          nombre: t.nombre,
+          inicial: t.banco ? t.banco.charAt(0) : 'T',
+          color: t.colorTema === 'cyan' ? '#06B6D4' : '#8B5CF6',
+          monto: ciclo.montoFacturado,
+          moneda: t.moneda,
+          dias: dias,
+          urgente: dias <= 5,
+        });
       }
     });
     
-    if (!proximoPago) return '';
-    
-    const dias = Fechas.diasHasta(proximoPago.fechaPago);
-    const urgente = dias <= 5;
+    if (items.length === 0) {
+      return `
+        <div class="aside-card">
+          <div class="aside-card-header">
+            <div class="aside-card-titles">
+              <div class="aside-card-title">Próximos pagos</div>
+            </div>
+          </div>
+          <div style="text-align:center;color:var(--text-tertiary);font-size:0.8125rem;padding:var(--space-md);">
+            Sin pagos próximos 🎉
+          </div>
+        </div>
+      `;
+    }
     
     return `
-      <div class="aside-card" style="${urgente ? 'border-color: rgba(245, 158, 11, 0.3);' : ''}">
+      <div class="aside-card">
         <div class="aside-card-header">
-          <div class="aside-card-title">${urgente ? '⚠ Próximo pago' : 'Próximo pago'}</div>
-        </div>
-        
-        <div style="margin-bottom:var(--space-md);">
-          <div style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:4px;">${tarjetaPago.nombre}</div>
-          <div style="font-size:1.5rem;font-weight:700;color:${urgente ? 'var(--color-warning)' : 'var(--text-primary)'};">
-            ${Formato.formatearMoneda(proximoPago.montoFacturado, tarjetaPago.moneda)}
-          </div>
-          <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">
-            En ${dias} ${dias === 1 ? 'día' : 'días'} · ${Fechas.formatoCompleto(proximoPago.fechaPago)}
+          <div class="aside-card-titles">
+            <div class="aside-card-title">Próximos pagos</div>
           </div>
         </div>
         
-        <button class="btn-primary" style="width:100%;justify-content:center;" 
-                onclick="App.navegarA('tarjetas')">
-          Ver tarjeta
-        </button>
+        <div class="upcoming-list">
+          ${items.slice(0, 4).map((it, i) => `
+            <div class="upcoming-item" onclick="App.navegarA('tarjetas')">
+              <div class="upcoming-icon" style="background:${it.color};">${it.inicial}</div>
+              <div class="upcoming-info">
+                <div class="upcoming-name">${it.nombre.length > 14 ? it.nombre.substring(0, 14) + '...' : it.nombre}</div>
+                <div class="upcoming-meta">En ${it.dias} ${it.dias === 1 ? 'día' : 'días'}</div>
+              </div>
+              <div class="upcoming-sparkline">
+                <canvas id="sparkUp${i}"></canvas>
+              </div>
+              <div>
+                <div class="upcoming-amount">${Formato.formatearMoneda(it.monto, it.moneda)}</div>
+                <div class="upcoming-change ${it.urgente ? 'negative' : 'positive'}">
+                  ${it.urgente ? '⚠ Urgente' : 'A tiempo'}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     `;
+  },
+  
+  renderSparklinesUpcoming() {
+    document.querySelectorAll('[id^="sparkUp"]').forEach((canvas, i) => {
+      const points = Array.from({ length: 8 }, () => Math.random() * 100 + 50);
+      const ctx = canvas.getContext('2d');
+      
+      Graficos.destruir(canvas.id);
+      Graficos.instancias[canvas.id] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: points.map((_, i) => i),
+          datasets: [{
+            data: points,
+            borderColor: '#14F0CD',
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            tension: 0.4,
+            pointRadius: 0,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false } }
+        }
+      });
+    });
+  },
+  
+  /* ============ EVENTOS ============ */
+  configurarEventos() {
+    // Tabs principales
+    document.querySelectorAll('.summary-tab[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.tabActiva = btn.dataset.tab;
+        const container = document.getElementById('pageContent');
+        if (container) this.render(container, this.monedaVista);
+      });
+    });
+    
+    // Tabs de history
+    document.querySelectorAll('.history-tab[data-history-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.historyTab = btn.dataset.historyTab;
+        document.querySelectorAll('.history-tab').forEach(b => {
+          b.classList.toggle('active', b.dataset.historyTab === this.historyTab);
+        });
+      });
+    });
   },
 };
