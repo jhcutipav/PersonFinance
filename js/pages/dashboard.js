@@ -35,7 +35,6 @@ const Dashboard = {
     setTimeout(() => {
       Graficos.gastosDiarios('chartActivity');
       this.renderSparklinesFavorites();
-      this.renderSparklinesUpcoming();
     }, 50);
     
     this.configurarEventos();
@@ -563,9 +562,35 @@ const Dashboard = {
           moneda: t.moneda,
           dias: dias,
           urgente: dias <= 5,
+          icono: null,
         });
       }
     });
+    
+    // Próximos gastos fijos (próximos 7 días)
+    const gastosProximos = API.obtenerProximosVencimientos(7);
+    gastosProximos.forEach(g => {
+      // Color según el icon-box color
+      const colorMap = {
+        red: '#EF4444', amber: '#F59E0B', cyan: '#06B6D4',
+        purple: '#8B5CF6', green: '#10B981', blue: '#3B82F6', pink: '#EC4899',
+      };
+      
+      items.push({
+        tipo: 'gasto',
+        nombre: g.nombre,
+        inicial: null,
+        icono: g.icono,
+        color: colorMap[g.color] || '#3B82F6',
+        monto: g.monto,
+        moneda: g.moneda,
+        dias: g.diasFaltan,
+        urgente: g.diasFaltan <= 3,
+      });
+    });
+    
+    // Ordenar por días (más urgente primero)
+    items.sort((a, b) => a.dias - b.dias);
     
     if (items.length === 0) {
       return `
@@ -587,19 +612,19 @@ const Dashboard = {
         <div class="aside-card-header">
           <div class="aside-card-titles">
             <div class="aside-card-title">Próximos pagos</div>
+            <div class="aside-card-subtitle">${items.length} ${items.length === 1 ? 'compromiso' : 'compromisos'}</div>
           </div>
         </div>
         
         <div class="upcoming-list">
-          ${items.slice(0, 4).map((it, i) => `
-            <div class="upcoming-item" onclick="App.navegarA('tarjetas')">
-              <div class="upcoming-icon" style="background:${it.color};">${it.inicial}</div>
+          ${items.slice(0, 5).map((it, i) => `
+            <div class="upcoming-item" onclick="App.navegarA('${it.tipo === 'tarjeta' ? 'tarjetas' : 'gastos-fijos'}')">
+              <div class="upcoming-icon" style="background:${it.color};">
+                ${it.icono ? `<span style="font-size:14px;">${it.icono}</span>` : it.inicial}
+              </div>
               <div class="upcoming-info">
                 <div class="upcoming-name">${it.nombre.length > 14 ? it.nombre.substring(0, 14) + '...' : it.nombre}</div>
-                <div class="upcoming-meta">En ${it.dias} ${it.dias === 1 ? 'día' : 'días'}</div>
-              </div>
-              <div class="upcoming-sparkline">
-                <canvas id="sparkUp${i}"></canvas>
+                <div class="upcoming-meta">${it.dias === 0 ? 'Hoy' : it.dias === 1 ? 'Mañana' : `En ${it.dias} días`}</div>
               </div>
               <div>
                 <div class="upcoming-amount">${Formato.formatearMoneda(it.monto, it.moneda)}</div>

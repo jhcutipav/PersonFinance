@@ -16,6 +16,12 @@
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/transacciones.css">
   <link rel="stylesheet" href="css/tarjetas.css">
+  <link rel="stylesheet" href="css/gastosFijos.css">
+  <link rel="stylesheet" href="css/presupuestos.css">
+  <link rel="stylesheet" href="css/deudas.css">
+  <link rel="stylesheet" href="css/metas.css">
+  <link rel="stylesheet" href="css/reportes.css">
+  <link rel="stylesheet" href="css/transferencias.css">
   <link rel="stylesheet" href="css/modal.css">
   
   <!-- Chart.js desde CDN -->
@@ -34,7 +40,14 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="logo" title="Triple-click para resetear datos">💎</div>
+        <div class="logo-text">FinanzApp</div>
       </div>
+      
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Expandir/Contraer sidebar">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
       
       <button class="sidebar-close" id="sidebarClose" aria-label="Cerrar">✕</button>
       
@@ -66,6 +79,10 @@
         <a href="#metas" class="nav-item" data-page="metas" data-label="Metas">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
           <span>Metas</span>
+        </a>
+        <a href="#transferencias" class="nav-item" data-page="transferencias" data-label="Transferencias">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          <span>Transferencias</span>
         </a>
         <a href="#reportes" class="nav-item" data-page="reportes" data-label="Reportes">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2"/></svg>
@@ -146,6 +163,7 @@
   <script src="js/utils/formato.js"></script>
   <script src="js/utils/fechas.js"></script>
   <script src="js/utils/tarjetaCredito.js"></script>
+  <script src="js/utils/prestamos.js"></script>
   
   <!-- 2. Datos -->
   <script src="js/data/mockData.js"></script>
@@ -166,6 +184,16 @@
   <script src="js/pages/tarjetaForm.js"></script>
   <script src="js/pages/pagoTarjetaForm.js"></script>
   <script src="js/pages/tarjetas.js"></script>
+  <script src="js/pages/gastoFijoForm.js"></script>
+  <script src="js/pages/gastosFijos.js"></script>
+  <script src="js/pages/presupuestoForm.js"></script>
+  <script src="js/pages/presupuestos.js"></script>
+  <script src="js/pages/deudaForm.js"></script>
+  <script src="js/pages/deudas.js"></script>
+  <script src="js/pages/metaForm.js"></script>
+  <script src="js/pages/metas.js"></script>
+  <script src="js/pages/reportes.js"></script>
+  <script src="js/pages/transferencias.js"></script>
   <script src="js/pages/dashboard.js"></script>
   
   <!-- 6. App principal -->

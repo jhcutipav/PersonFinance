@@ -29,12 +29,29 @@
   transition: width var(--transition-base);
 }
 
+/* Sidebar EXPANDIDO (en escritorio cuando el usuario lo abre) */
+.app-container.sidebar-expanded .sidebar {
+  align-items: stretch;
+  padding: var(--space-md);
+}
+
+.app-container.sidebar-expanded {
+  grid-template-columns: var(--sidebar-width-expanded) 1fr;
+}
+
 .sidebar-header {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 10px;
   margin-bottom: var(--space-lg);
   padding: 0 var(--space-sm);
+  width: 100%;
+  position: relative;
+}
+
+.app-container.sidebar-expanded .sidebar-header {
+  justify-content: space-between;
 }
 
 .logo {
@@ -47,13 +64,60 @@
   justify-content: center;
   font-size: 22px;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  display: none;
+  white-space: nowrap;
+}
+
+.app-container.sidebar-expanded .logo-text {
+  display: block;
+}
+
+/* Botón toggle del sidebar (integrado, hamburguesa) */
+.sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--sidebar-bg-hover);
+  border: none;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px auto var(--space-md);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: var(--sidebar-active);
+  color: white;
+}
+
+.sidebar-toggle svg {
+  transition: transform 0.3s ease;
+}
+
+.app-container.sidebar-expanded .sidebar-toggle {
+  margin: 8px 0 var(--space-md);
+}
+
+.app-container.sidebar-expanded .sidebar-toggle svg {
+  transform: rotate(180deg);
 }
 
 .sidebar-close {
   display: none;
 }
 
-/* Items de navegación (solo iconos en sidebar compacto) */
+/* Items de navegación */
 .nav {
   display: flex;
   flex-direction: column;
@@ -62,6 +126,11 @@
   width: 100%;
   align-items: center;
   flex: 1;
+}
+
+.app-container.sidebar-expanded .nav {
+  align-items: stretch;
+  padding: 0;
 }
 
 .nav-item {
@@ -75,6 +144,13 @@
   transition: all var(--transition-fast);
   cursor: pointer;
   position: relative;
+  gap: 12px;
+}
+
+.app-container.sidebar-expanded .nav-item {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0 14px;
 }
 
 .nav-item:hover {
@@ -85,18 +161,24 @@
 .nav-item.active {
   background: var(--sidebar-active);
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(20, 240, 205, 0.4);
 }
 
 .nav-item span {
   display: none;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.app-container.sidebar-expanded .nav-item span {
+  display: inline;
 }
 
 .nav-item svg {
   flex-shrink: 0;
 }
 
-/* Tooltip al hover (nombre del item) */
+/* Tooltip al hover (solo cuando está colapsado) */
 .nav-item::before {
   content: attr(data-label);
   position: absolute;
@@ -121,7 +203,11 @@
   opacity: 1;
 }
 
-/* Separador */
+/* Sin tooltip cuando el sidebar está expandido (ya muestra texto) */
+.app-container.sidebar-expanded .nav-item::before {
+  display: none;
+}
+
 .nav-separator {
   width: 30px;
   height: 1px;
@@ -129,7 +215,6 @@
   margin: var(--space-sm) 0;
 }
 
-/* Logout al final */
 .sidebar-footer {
   padding: var(--space-sm);
   margin-top: auto;

@@ -176,6 +176,15 @@ const API = {
   obtenerTransacciones(filtros = {}) {
     let trans = Storage.cargar('transacciones') || [];
     
+    // Excluir transferencias internas a menos que se pida explícitamente
+    if (!filtros.incluirTransferencias) {
+      trans = trans.filter(t => !t.esTransferencia);
+    }
+    
+    if (filtros.soloTransferencias) {
+      trans = (Storage.cargar('transacciones') || []).filter(t => t.esTransferencia);
+    }
+    
     if (filtros.tipo) {
       trans = trans.filter(t => t.tipo === filtros.tipo);
     }
@@ -362,6 +371,120 @@ const API = {
   obtenerPresupuestos(mes, anio) {
     const presupuestos = Storage.cargar('presupuestos') || [];
     return presupuestos.filter(p => p.mes === mes && p.anio === anio);
+  },
+  
+  obtenerPresupuestoPorId(id) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    return presupuestos.find(p => p.id === id);
+  },
+  
+  /**
+   * Calcula cuánto se ha gastado en una categoría (incluyendo subcategorías) en un mes
+   */
+  calcularGastadoEnCategoria(categoriaId, mes, anio, monedaDestino = 'PEN') {
+    const subs = this.obtenerSubcategorias(categoriaId).map(s => s.id);
+    const idsValidos = [categoriaId, ...subs];
+    
+    const trans = (Storage.cargar('transacciones') || []).filter(t => {
+      if (t.tipo !== 'egreso') return false;
+      if (!idsValidos.includes(t.categoriaId)) return false;
+      const fecha = new Date(t.fecha);
+      return fecha.getMonth() + 1 === mes && fecha.getFullYear() === anio;
+    });
+    
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  crearPresupuesto(datos) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    
+    // Verificar si ya existe uno para esa categoría/mes/año
+    const existente = presupuestos.find(p => 
+      p.categoriaId === parseInt(datos.categoriaId) && 
+      p.mes === parseInt(datos.mes) && 
+      p.anio === parseInt(datos.anio)
+    );
+    
+    if (existente) {
+      // Actualizar el existente
+      return this.actualizarPresupuesto(existente.id, datos);
+    }
+    
+    const nuevo = {
+      id: Storage.nuevoId('presupuestos'),
+      categoriaId: parseInt(datos.categoriaId),
+      monto: parseFloat(datos.monto),
+      moneda: datos.moneda || 'PEN',
+      mes: parseInt(datos.mes),
+      anio: parseInt(datos.anio),
+      gastado: 0, // se calcula dinámicamente
+    };
+    presupuestos.push(nuevo);
+    Storage.guardar('presupuestos', presupuestos);
+    return nuevo;
+  },
+  
+  actualizarPresupuesto(id, datos) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    const idx = presupuestos.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+    
+    presupuestos[idx] = {
+      ...presupuestos[idx],
+      ...datos,
+      monto: parseFloat(datos.monto || presupuestos[idx].monto),
+      categoriaId: parseInt(datos.categoriaId || presupuestos[idx].categoriaId),
+    };
+    Storage.guardar('presupuestos', presupuestos);
+    return presupuestos[idx];
+  },
+  
+  eliminarPresupuesto(id) {
+    const presupuestos = Storage.cargar('presupuestos') || [];
+    const filtrados = presupuestos.filter(p => p.id !== id);
+    Storage.guardar('presupuestos', filtrados);
+    return true;
+  },
+  
+  /**
+   * Aplica una plantilla creando varios presupuestos a la vez para el mes/año dados
+   */
+  aplicarPlantillaPresupuestos(plantilla, ingresoEstimado, mes, anio, moneda = 'PEN') {
+    const distribucion = {
+      'cincuenta_treinta_veinte': [
+        { categoriaId: 1, porcentaje: 0.20 }, // Alimentación
+        { categoriaId: 7, porcentaje: 0.25 }, // Vivienda
+        { categoriaId: 4, porcentaje: 0.05 }, // Servicios
+        { categoriaId: 2, porcentaje: 0.10 }, // Transporte
+        { categoriaId: 3, porcentaje: 0.15 }, // Entretenimiento
+        { categoriaId: 5, porcentaje: 0.05 }, // Suscripciones
+        { categoriaId: 6, porcentaje: 0.10 }, // Salud
+        { categoriaId: 8, porcentaje: 0.10 }, // Otros
+      ],
+      'basico': [
+        { categoriaId: 1, porcentaje: 0.30 },
+        { categoriaId: 7, porcentaje: 0.30 },
+        { categoriaId: 2, porcentaje: 0.15 },
+        { categoriaId: 4, porcentaje: 0.10 },
+        { categoriaId: 8, porcentaje: 0.15 },
+      ],
+    };
+    
+    const items = distribucion[plantilla] || [];
+    let creados = 0;
+    
+    items.forEach(item => {
+      this.crearPresupuesto({
+        categoriaId: item.categoriaId,
+        monto: ingresoEstimado * item.porcentaje,
+        moneda,
+        mes,
+        anio,
+      });
+      creados++;
+    });
+    
+    return creados;
   },
   
   /* ========== CÁLCULOS AGREGADOS ========== */
@@ -556,6 +679,968 @@ const API = {
     }
     
     return nuevaTrans;
+  },
+  
+  /* ========== GASTOS FIJOS ========== */
+  obtenerGastosFijos(filtros = {}) {
+    let gastos = Storage.cargar('gastosFijos') || [];
+    
+    if (filtros.activos === true) {
+      gastos = gastos.filter(g => g.activo);
+    }
+    
+    if (filtros.esSuscripcion !== undefined) {
+      gastos = gastos.filter(g => g.esSuscripcion === filtros.esSuscripcion);
+    }
+    
+    if (filtros.tipo) {
+      gastos = gastos.filter(g => g.tipo === filtros.tipo);
+    }
+    
+    return gastos;
+  },
+  
+  obtenerGastoFijoPorId(id) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    return gastos.find(g => g.id === id);
+  },
+  
+  crearGastoFijo(datos) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const cat = this.obtenerCategoriaPorId(datos.categoriaId);
+    
+    const nuevo = {
+      id: Storage.nuevoId('gastosFijos'),
+      nombre: datos.nombre,
+      tipo: datos.tipo || 'fijo',
+      esSuscripcion: datos.esSuscripcion || false,
+      categoriaId: parseInt(datos.categoriaId),
+      cuentaId: parseInt(datos.cuentaId),
+      monto: parseFloat(datos.monto),
+      moneda: datos.moneda || 'PEN',
+      frecuencia: datos.frecuencia || 'mensual',
+      diaCobro: parseInt(datos.diaCobro),
+      icono: datos.icono || (cat ? cat.icono : '💰'),
+      color: datos.color || (cat ? cat.color : 'blue'),
+      activo: true,
+      historico: [],
+    };
+    gastos.push(nuevo);
+    Storage.guardar('gastosFijos', gastos);
+    return nuevo;
+  },
+  
+  actualizarGastoFijo(id, datos) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const idx = gastos.findIndex(g => g.id === id);
+    if (idx === -1) return null;
+    
+    gastos[idx] = {
+      ...gastos[idx],
+      ...datos,
+      monto: parseFloat(datos.monto || gastos[idx].monto),
+      diaCobro: parseInt(datos.diaCobro || gastos[idx].diaCobro),
+      categoriaId: parseInt(datos.categoriaId || gastos[idx].categoriaId),
+      cuentaId: parseInt(datos.cuentaId || gastos[idx].cuentaId),
+    };
+    Storage.guardar('gastosFijos', gastos);
+    return gastos[idx];
+  },
+  
+  eliminarGastoFijo(id) {
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const filtrados = gastos.filter(g => g.id !== id);
+    Storage.guardar('gastosFijos', filtrados);
+    return true;
+  },
+  
+  /**
+   * Marca un gasto fijo como pagado: crea la transacción y agrega al histórico
+   */
+  marcarGastoComoPagado(id, datos = {}) {
+    const gasto = this.obtenerGastoFijoPorId(id);
+    if (!gasto) throw new Error('Gasto no encontrado');
+    
+    const monto = parseFloat(datos.monto || gasto.monto);
+    const fecha = datos.fecha || new Date().toISOString().split('T')[0];
+    
+    // 1. Crear transacción
+    const nuevaTrans = this.crearTransaccion({
+      cuentaId: gasto.cuentaId,
+      categoriaId: gasto.categoriaId,
+      tipo: 'egreso',
+      monto: monto,
+      descripcion: gasto.nombre,
+      fecha: fecha,
+    });
+    
+    // 2. Agregar al histórico
+    const gastos = Storage.cargar('gastosFijos') || [];
+    const idx = gastos.findIndex(g => g.id === id);
+    if (idx !== -1) {
+      if (!gastos[idx].historico) gastos[idx].historico = [];
+      gastos[idx].historico.push({
+        fecha,
+        monto,
+        pagado: true,
+        transaccionId: nuevaTrans.id,
+      });
+      // Limitar histórico a últimos 12
+      if (gastos[idx].historico.length > 12) {
+        gastos[idx].historico = gastos[idx].historico.slice(-12);
+      }
+      Storage.guardar('gastosFijos', gastos);
+    }
+    
+    return nuevaTrans;
+  },
+  
+  /**
+   * Calcula el promedio del histórico de un gasto variable
+   */
+  calcularPromedio(gasto) {
+    if (!gasto.historico || gasto.historico.length === 0) return gasto.monto;
+    const suma = gasto.historico.reduce((s, h) => s + h.monto, 0);
+    return suma / gasto.historico.length;
+  },
+  
+  /**
+   * Total mensual de gastos fijos en una moneda dada
+   */
+  calcularTotalGastosFijos(monedaDestino = 'PEN') {
+    const gastos = this.obtenerGastosFijos({ activos: true });
+    return Formato.sumarEnMoneda(gastos, monedaDestino);
+  },
+  
+  /**
+   * Próximos vencimientos en los próximos N días
+   */
+  obtenerProximosVencimientos(diasLimite = 30) {
+    const gastos = this.obtenerGastosFijos({ activos: true });
+    const hoy = new Date();
+    const items = [];
+    
+    gastos.forEach(g => {
+      if (g.frecuencia !== 'mensual') return; // simplificación: solo mensuales por ahora
+      
+      const proximaFecha = Fechas.proximoDiaDelMes(g.diaCobro);
+      const diasFaltan = Fechas.diasHasta(proximaFecha);
+      
+      if (diasFaltan >= 0 && diasFaltan <= diasLimite) {
+        items.push({
+          ...g,
+          proximaFecha,
+          diasFaltan,
+        });
+      }
+    });
+    
+    items.sort((a, b) => a.diasFaltan - b.diasFaltan);
+    return items;
+  },
+  
+  /* ========== DEUDAS / PRÉSTAMOS ========== */
+  obtenerDeudas(filtros = {}) {
+    let deudas = Storage.cargar('deudas') || [];
+    
+    if (filtros.activos === true) {
+      deudas = deudas.filter(d => d.activo);
+    }
+    
+    return deudas;
+  },
+  
+  obtenerDeudaPorId(id) {
+    const deudas = Storage.cargar('deudas') || [];
+    return deudas.find(d => d.id === id);
+  },
+  
+  crearDeuda(datos) {
+    const deudas = Storage.cargar('deudas') || [];
+    const nueva = {
+      id: Storage.nuevoId('deudas'),
+      nombre: datos.nombre,
+      acreedor: datos.acreedor || '',
+      capital: parseFloat(datos.capital),
+      moneda: datos.moneda || 'PEN',
+      tasaTEA: parseFloat(datos.tasaTEA),
+      plazoMeses: parseInt(datos.plazoMeses),
+      cuotasPagadas: parseInt(datos.cuotasPagadas) || 0,
+      sistema: datos.sistema || 'frances',
+      diaPago: parseInt(datos.diaPago) || 1,
+      fechaInicio: datos.fechaInicio || new Date().toISOString().split('T')[0],
+      cuentaPagoId: parseInt(datos.cuentaPagoId),
+      categoriaId: parseInt(datos.categoriaId) || 8,
+      icono: datos.icono || '💵',
+      color: datos.color || 'amber',
+      activo: true,
+    };
+    deudas.push(nueva);
+    Storage.guardar('deudas', deudas);
+    return nueva;
+  },
+  
+  actualizarDeuda(id, datos) {
+    const deudas = Storage.cargar('deudas') || [];
+    const idx = deudas.findIndex(d => d.id === id);
+    if (idx === -1) return null;
+    
+    deudas[idx] = {
+      ...deudas[idx],
+      ...datos,
+      capital: parseFloat(datos.capital || deudas[idx].capital),
+      tasaTEA: parseFloat(datos.tasaTEA || deudas[idx].tasaTEA),
+      plazoMeses: parseInt(datos.plazoMeses || deudas[idx].plazoMeses),
+      cuotasPagadas: parseInt(datos.cuotasPagadas !== undefined ? datos.cuotasPagadas : deudas[idx].cuotasPagadas),
+    };
+    Storage.guardar('deudas', deudas);
+    return deudas[idx];
+  },
+  
+  eliminarDeuda(id) {
+    const deudas = Storage.cargar('deudas') || [];
+    const filtradas = deudas.filter(d => d.id !== id);
+    Storage.guardar('deudas', filtradas);
+    return true;
+  },
+  
+  /**
+   * Registra el pago de una cuota: descuenta cuenta + incrementa cuotasPagadas
+   */
+  pagarCuotaDeuda(deudaId, datos = {}) {
+    const deuda = this.obtenerDeudaPorId(deudaId);
+    if (!deuda) throw new Error('Deuda no encontrada');
+    
+    const cronograma = Prestamos.generarCronograma(
+      deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema
+    );
+    
+    const cuotaIndex = deuda.cuotasPagadas;
+    if (cuotaIndex >= cronograma.length) {
+      throw new Error('Esta deuda ya está totalmente pagada');
+    }
+    
+    const cuota = cronograma[cuotaIndex];
+    const monto = parseFloat(datos.monto || cuota.cuota);
+    const fecha = datos.fecha || new Date().toISOString().split('T')[0];
+    
+    // Crear transacción
+    this.crearTransaccion({
+      cuentaId: deuda.cuentaPagoId,
+      categoriaId: deuda.categoriaId || 8,
+      tipo: 'egreso',
+      monto: monto,
+      descripcion: `Cuota ${cuotaIndex + 1}/${deuda.plazoMeses} - ${deuda.nombre}`,
+      fecha: fecha,
+    });
+    
+    // Incrementar cuotasPagadas
+    return this.actualizarDeuda(deudaId, { cuotasPagadas: deuda.cuotasPagadas + 1 });
+  },
+  
+  /**
+   * Calcula el saldo pendiente actual de una deuda según cuotas pagadas
+   */
+  calcularSaldoDeuda(deuda) {
+    const cronograma = Prestamos.generarCronograma(
+      deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema
+    );
+    
+    if (deuda.cuotasPagadas >= cronograma.length) return 0;
+    
+    return cronograma[deuda.cuotasPagadas].saldoInicial;
+  },
+  
+  /* ========== METAS DE AHORRO ========== */
+  obtenerMetas(filtros = {}) {
+    let metas = Storage.cargar('metas') || [];
+    
+    if (filtros.activas === true) {
+      metas = metas.filter(m => m.activa);
+    }
+    
+    if (filtros.completadas === true) {
+      metas = metas.filter(m => m.montoActual >= m.montoObjetivo);
+    } else if (filtros.completadas === false) {
+      metas = metas.filter(m => m.montoActual < m.montoObjetivo);
+    }
+    
+    return metas;
+  },
+  
+  obtenerMetaPorId(id) {
+    const metas = Storage.cargar('metas') || [];
+    return metas.find(m => m.id === id);
+  },
+  
+  crearMeta(datos) {
+    const metas = Storage.cargar('metas') || [];
+    const nueva = {
+      id: Storage.nuevoId('metas'),
+      nombre: datos.nombre,
+      descripcion: datos.descripcion || '',
+      montoObjetivo: parseFloat(datos.montoObjetivo),
+      montoActual: parseFloat(datos.montoActual) || 0,
+      moneda: datos.moneda || 'PEN',
+      fechaLimite: datos.fechaLimite,
+      fechaCreacion: new Date().toISOString().split('T')[0],
+      cuentaAhorroId: parseInt(datos.cuentaAhorroId),
+      icono: datos.icono || '🎯',
+      color: datos.color || 'cyan',
+      prioridad: datos.prioridad || 'media',
+      activa: true,
+      historial: [],
+    };
+    metas.push(nueva);
+    Storage.guardar('metas', metas);
+    return nueva;
+  },
+  
+  actualizarMeta(id, datos) {
+    const metas = Storage.cargar('metas') || [];
+    const idx = metas.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    
+    metas[idx] = {
+      ...metas[idx],
+      ...datos,
+      montoObjetivo: parseFloat(datos.montoObjetivo || metas[idx].montoObjetivo),
+      montoActual: parseFloat(datos.montoActual !== undefined ? datos.montoActual : metas[idx].montoActual),
+    };
+    Storage.guardar('metas', metas);
+    return metas[idx];
+  },
+  
+  eliminarMeta(id) {
+    const metas = Storage.cargar('metas') || [];
+    const filtradas = metas.filter(m => m.id !== id);
+    Storage.guardar('metas', filtradas);
+    return true;
+  },
+  
+  /**
+   * Aporta a una meta: aumenta el monto actual y registra en el historial.
+   * Opcionalmente registra una transacción (transferencia desde otra cuenta).
+   */
+  aportarAMeta(metaId, monto, opciones = {}) {
+    const meta = this.obtenerMetaPorId(metaId);
+    if (!meta) throw new Error('Meta no encontrada');
+    
+    const fecha = opciones.fecha || new Date().toISOString().split('T')[0];
+    const montoNum = parseFloat(monto);
+    if (isNaN(montoNum) || montoNum <= 0) throw new Error('Monto inválido');
+    
+    // Actualizar la meta
+    const metas = Storage.cargar('metas') || [];
+    const idx = metas.findIndex(m => m.id === metaId);
+    if (idx === -1) throw new Error('Meta no encontrada');
+    
+    metas[idx].montoActual += montoNum;
+    if (!metas[idx].historial) metas[idx].historial = [];
+    metas[idx].historial.push({
+      fecha,
+      monto: montoNum,
+      tipo: 'aporte',
+    });
+    Storage.guardar('metas', metas);
+    
+    return metas[idx];
+  },
+  
+  /**
+   * Retira dinero de una meta (cuando se cumple o por necesidad)
+   */
+  retirarDeMeta(metaId, monto, opciones = {}) {
+    const meta = this.obtenerMetaPorId(metaId);
+    if (!meta) throw new Error('Meta no encontrada');
+    
+    const fecha = opciones.fecha || new Date().toISOString().split('T')[0];
+    const montoNum = parseFloat(monto);
+    if (isNaN(montoNum) || montoNum <= 0) throw new Error('Monto inválido');
+    if (montoNum > meta.montoActual) throw new Error('No tienes suficiente ahorrado');
+    
+    const metas = Storage.cargar('metas') || [];
+    const idx = metas.findIndex(m => m.id === metaId);
+    
+    metas[idx].montoActual -= montoNum;
+    if (!metas[idx].historial) metas[idx].historial = [];
+    metas[idx].historial.push({
+      fecha,
+      monto: montoNum,
+      tipo: 'retiro',
+    });
+    Storage.guardar('metas', metas);
+    
+    return metas[idx];
+  },
+  
+  /**
+   * Calcula el aporte mensual recomendado para llegar a la meta a tiempo
+   */
+  calcularAporteMensualRecomendado(meta) {
+    const hoy = new Date();
+    const limite = new Date(meta.fechaLimite);
+    const restante = meta.montoObjetivo - meta.montoActual;
+    
+    if (restante <= 0) return 0;
+    if (limite <= hoy) return restante; // ya venció
+    
+    // Diferencia en meses (aproximado)
+    const meses = Math.max(1, 
+      (limite.getFullYear() - hoy.getFullYear()) * 12 + 
+      (limite.getMonth() - hoy.getMonth())
+    );
+    
+    return restante / meses;
+  },
+  
+  /**
+   * Calcula el estado de una meta: en_curso, atrasada, completada, vencida
+   */
+  obtenerEstadoMeta(meta) {
+    if (meta.montoActual >= meta.montoObjetivo) return 'completada';
+    
+    const hoy = new Date();
+    const limite = new Date(meta.fechaLimite);
+    
+    if (limite < hoy) return 'vencida';
+    
+    // Calcular si vamos atrasados según el ritmo
+    const inicio = new Date(meta.fechaCreacion);
+    const totalDias = Math.max(1, (limite - inicio) / (1000 * 60 * 60 * 24));
+    const diasTranscurridos = (hoy - inicio) / (1000 * 60 * 60 * 24);
+    const proporcionTiempo = diasTranscurridos / totalDias;
+    const proporcionAhorro = meta.montoActual / meta.montoObjetivo;
+    
+    if (proporcionAhorro < proporcionTiempo - 0.1) return 'atrasada';
+    return 'en_curso';
+  },
+  
+  /* ========== TRANSFERENCIAS ENTRE CUENTAS ========== */
+  
+  /**
+   * Crea una transferencia entre dos cuentas propias.
+   * Genera 2 transacciones vinculadas con flag esTransferencia=true.
+   * Si las monedas son distintas, aplica el tipo de cambio.
+   */
+  crearTransferencia(datos) {
+    const cuentaOrigen = this.obtenerCuentaPorId(parseInt(datos.cuentaOrigenId));
+    const cuentaDestino = this.obtenerCuentaPorId(parseInt(datos.cuentaDestinoId));
+    
+    if (!cuentaOrigen) throw new Error('Cuenta origen no encontrada');
+    if (!cuentaDestino) throw new Error('Cuenta destino no encontrada');
+    if (cuentaOrigen.id === cuentaDestino.id) throw new Error('Las cuentas deben ser diferentes');
+    
+    const monto = parseFloat(datos.monto);
+    if (!monto || monto <= 0) throw new Error('Monto inválido');
+    
+    if (cuentaOrigen.saldo < monto) {
+      throw new Error('Saldo insuficiente en la cuenta origen');
+    }
+    
+    const fecha = datos.fecha || new Date().toISOString().split('T')[0];
+    const descripcion = datos.descripcion || '';
+    
+    // Si las monedas son distintas, calcular monto destino
+    let montoDestino = monto;
+    if (cuentaOrigen.moneda !== cuentaDestino.moneda) {
+      montoDestino = Formato.convertir(monto, cuentaOrigen.moneda, cuentaDestino.moneda);
+    }
+    
+    // ID único de la transferencia (para vincular las 2 transacciones)
+    const transferenciaId = 'tf_' + Date.now();
+    
+    // Categoría especial "Transferencia" - usaremos id 999 reservado
+    // Si no existe la categoría, la creamos
+    const categorias = Storage.cargar('categorias') || [];
+    let catTransfEgreso = categorias.find(c => c.id === 999);
+    let catTransfIngreso = categorias.find(c => c.id === 998);
+    
+    if (!catTransfEgreso) {
+      categorias.push({
+        id: 999,
+        nombre: 'Transferencia enviada',
+        tipo: 'egreso',
+        icono: '↗️',
+        color: 'cyan',
+        categoriaPadreId: null,
+      });
+    }
+    if (!catTransfIngreso) {
+      categorias.push({
+        id: 998,
+        nombre: 'Transferencia recibida',
+        tipo: 'ingreso',
+        icono: '↙️',
+        color: 'cyan',
+        categoriaPadreId: null,
+      });
+    }
+    Storage.guardar('categorias', categorias);
+    
+    const transacciones = Storage.cargar('transacciones') || [];
+    
+    // Transacción de salida (origen)
+    const transOrigen = {
+      id: Storage.nuevoId('transacciones'),
+      cuentaId: cuentaOrigen.id,
+      categoriaId: 999,
+      tipo: 'egreso',
+      monto: monto,
+      moneda: cuentaOrigen.moneda,
+      descripcion: `Transferencia a ${cuentaDestino.nombre}${descripcion ? ' · ' + descripcion : ''}`,
+      fecha: fecha,
+      esTransferencia: true,
+      transferenciaId: transferenciaId,
+      cuentaDestinoId: cuentaDestino.id,
+      esCredito: false,
+    };
+    transacciones.push(transOrigen);
+    
+    // Transacción de entrada (destino)
+    const transDestino = {
+      id: Storage.nuevoId('transacciones'),
+      cuentaId: cuentaDestino.id,
+      categoriaId: 998,
+      tipo: 'ingreso',
+      monto: montoDestino,
+      moneda: cuentaDestino.moneda,
+      descripcion: `Transferencia desde ${cuentaOrigen.nombre}${descripcion ? ' · ' + descripcion : ''}`,
+      fecha: fecha,
+      esTransferencia: true,
+      transferenciaId: transferenciaId,
+      cuentaOrigenId: cuentaOrigen.id,
+      esCredito: false,
+    };
+    transacciones.push(transDestino);
+    
+    Storage.guardar('transacciones', transacciones);
+    
+    // Actualizar saldos de cuentas
+    const cuentas = Storage.cargar('cuentas') || [];
+    const idxOrigen = cuentas.findIndex(c => c.id === cuentaOrigen.id);
+    const idxDestino = cuentas.findIndex(c => c.id === cuentaDestino.id);
+    
+    cuentas[idxOrigen].saldo -= monto;
+    cuentas[idxDestino].saldo += montoDestino;
+    
+    Storage.guardar('cuentas', cuentas);
+    
+    return {
+      transferenciaId,
+      transOrigen,
+      transDestino,
+      tasaConversion: monto !== montoDestino ? (montoDestino / monto) : null,
+    };
+  },
+  
+  /**
+   * Obtiene todas las transferencias agrupadas (combina origen+destino en un solo objeto)
+   */
+  obtenerTransferencias(filtros = {}) {
+    const trans = (Storage.cargar('transacciones') || []).filter(t => t.esTransferencia);
+    
+    // Agrupar por transferenciaId
+    const grupos = {};
+    trans.forEach(t => {
+      if (!t.transferenciaId) return;
+      if (!grupos[t.transferenciaId]) grupos[t.transferenciaId] = {};
+      if (t.tipo === 'egreso') grupos[t.transferenciaId].origen = t;
+      else grupos[t.transferenciaId].destino = t;
+    });
+    
+    // Convertir a array
+    let resultado = Object.entries(grupos)
+      .filter(([_, g]) => g.origen && g.destino)
+      .map(([id, g]) => ({
+        transferenciaId: id,
+        fecha: g.origen.fecha,
+        cuentaOrigenId: g.origen.cuentaId,
+        cuentaDestinoId: g.destino.cuentaId,
+        monto: g.origen.monto,
+        montoDestino: g.destino.monto,
+        monedaOrigen: g.origen.moneda,
+        monedaDestino: g.destino.moneda,
+        descripcion: g.origen.descripcion.split(' · ')[1] || '',
+        transOrigenId: g.origen.id,
+        transDestinoId: g.destino.id,
+      }));
+    
+    // Filtros
+    if (filtros.cuentaId) {
+      resultado = resultado.filter(t => 
+        t.cuentaOrigenId === filtros.cuentaId || t.cuentaDestinoId === filtros.cuentaId
+      );
+    }
+    
+    // Ordenar por fecha desc
+    resultado.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    
+    if (filtros.limite) {
+      resultado = resultado.slice(0, filtros.limite);
+    }
+    
+    return resultado;
+  },
+  
+  /**
+   * Elimina una transferencia (las 2 transacciones) y revierte los saldos
+   */
+  eliminarTransferencia(transferenciaId) {
+    const trans = Storage.cargar('transacciones') || [];
+    const relacionadas = trans.filter(t => t.transferenciaId === transferenciaId);
+    
+    if (relacionadas.length === 0) return false;
+    
+    // Revertir saldos
+    const cuentas = Storage.cargar('cuentas') || [];
+    relacionadas.forEach(t => {
+      const idx = cuentas.findIndex(c => c.id === t.cuentaId);
+      if (idx === -1) return;
+      // Si era egreso, devolver el monto; si era ingreso, restarlo
+      const delta = t.tipo === 'egreso' ? t.monto : -t.monto;
+      cuentas[idx].saldo += delta;
+    });
+    Storage.guardar('cuentas', cuentas);
+    
+    // Eliminar las transacciones
+    const restantes = trans.filter(t => t.transferenciaId !== transferenciaId);
+    Storage.guardar('transacciones', restantes);
+    
+    return true;
+  },
+  
+  /* ========== REPORTES (cálculos para análisis) ========== */
+  
+  /**
+   * Obtiene transacciones en un rango de fechas
+   */
+  obtenerTransaccionesEnRango(fechaInicio, fechaFin, tipo = null) {
+    let trans = Storage.cargar('transacciones') || [];
+    
+    // Excluir transferencias internas (no afectan ingresos/egresos)
+    trans = trans.filter(t => !t.esTransferencia);
+    
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+    fin.setHours(23, 59, 59);
+    
+    trans = trans.filter(t => {
+      const f = new Date(t.fecha);
+      return f >= inicio && f <= fin;
+    });
+    
+    if (tipo) trans = trans.filter(t => t.tipo === tipo);
+    
+    return trans;
+  },
+  
+  /**
+   * Calcula KPIs principales para un rango
+   */
+  calcularKPIs(fechaInicio, fechaFin, monedaDestino = 'PEN') {
+    const trans = this.obtenerTransaccionesEnRango(fechaInicio, fechaFin);
+    const ingresos = trans.filter(t => t.tipo === 'ingreso');
+    const egresos = trans.filter(t => t.tipo === 'egreso');
+    
+    const totalIngresos = Formato.sumarEnMoneda(ingresos, monedaDestino);
+    const totalEgresos = Formato.sumarEnMoneda(egresos, monedaDestino);
+    const ahorro = totalIngresos - totalEgresos;
+    const tasaAhorro = totalIngresos > 0 ? (ahorro / totalIngresos) : 0;
+    
+    return {
+      totalIngresos,
+      totalEgresos,
+      ahorro,
+      tasaAhorro,
+      numTransacciones: trans.length,
+      promedioEgresoDiario: this.calcularPromedioPorDia(egresos, fechaInicio, fechaFin, monedaDestino),
+    };
+  },
+  
+  calcularPromedioPorDia(transacciones, fechaInicio, fechaFin, monedaDestino) {
+    const total = Formato.sumarEnMoneda(transacciones, monedaDestino);
+    const dias = Math.max(1, Math.ceil((new Date(fechaFin) - new Date(fechaInicio)) / (1000 * 60 * 60 * 24)));
+    return total / dias;
+  },
+  
+  /**
+   * Distribución de egresos por categoría padre
+   */
+  obtenerDistribucionPorCategoria(fechaInicio, fechaFin, monedaDestino = 'PEN') {
+    const trans = this.obtenerTransaccionesEnRango(fechaInicio, fechaFin, 'egreso');
+    const totales = {};
+    
+    trans.forEach(t => {
+      const cat = this.obtenerCategoriaPorId(t.categoriaId);
+      if (!cat) return;
+      const padre = cat.categoriaPadreId ? this.obtenerCategoriaPorId(cat.categoriaPadreId) : cat;
+      if (!padre) return;
+      
+      if (!totales[padre.id]) {
+        totales[padre.id] = { 
+          id: padre.id, 
+          nombre: padre.nombre, 
+          icono: padre.icono, 
+          color: padre.color,
+          total: 0,
+          numTrans: 0,
+        };
+      }
+      totales[padre.id].total += Formato.convertir(t.monto, t.moneda, monedaDestino);
+      totales[padre.id].numTrans++;
+    });
+    
+    return Object.values(totales).sort((a, b) => b.total - a.total);
+  },
+  
+  /**
+   * Top transacciones (gastos más grandes)
+   */
+  obtenerTopGastos(fechaInicio, fechaFin, limite = 10, monedaDestino = 'PEN') {
+    const trans = this.obtenerTransaccionesEnRango(fechaInicio, fechaFin, 'egreso');
+    
+    return trans
+      .map(t => ({
+        ...t,
+        montoEnMonedaDestino: Formato.convertir(t.monto, t.moneda, monedaDestino),
+      }))
+      .sort((a, b) => b.montoEnMonedaDestino - a.montoEnMonedaDestino)
+      .slice(0, limite);
+  },
+  
+  /**
+   * Análisis de hábitos: día de la semana con más gastos, categoría dominante, etc.
+   */
+  analizarHabitos(fechaInicio, fechaFin, monedaDestino = 'PEN') {
+    const trans = this.obtenerTransaccionesEnRango(fechaInicio, fechaFin, 'egreso');
+    
+    if (trans.length === 0) {
+      return {
+        diaMasActivo: null,
+        categoriaMasUsada: null,
+        montoMaximo: 0,
+        diasConGastos: 0,
+      };
+    }
+    
+    // Día de la semana con más gastos
+    const porDia = [0, 0, 0, 0, 0, 0, 0]; // Dom, Lun, Mar, ..., Sáb
+    const diasUnicos = new Set();
+    
+    trans.forEach(t => {
+      const f = new Date(t.fecha);
+      porDia[f.getDay()] += Formato.convertir(t.monto, t.moneda, monedaDestino);
+      diasUnicos.add(t.fecha);
+    });
+    
+    const diasNombres = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const indiceMaxDia = porDia.indexOf(Math.max(...porDia));
+    
+    // Categoría más usada
+    const distribucion = this.obtenerDistribucionPorCategoria(fechaInicio, fechaFin, monedaDestino);
+    const catMasUsada = distribucion[0] || null;
+    
+    // Monto máximo de una transacción
+    const montoMax = Math.max(...trans.map(t => Formato.convertir(t.monto, t.moneda, monedaDestino)));
+    
+    return {
+      diaMasActivo: { 
+        nombre: diasNombres[indiceMaxDia], 
+        monto: porDia[indiceMaxDia] 
+      },
+      categoriaMasUsada: catMasUsada,
+      montoMaximo: montoMax,
+      diasConGastos: diasUnicos.size,
+    };
+  },
+  
+  /**
+   * Calcula el patrimonio neto: activos (cuentas + metas + saldos a favor) - pasivos (deudas + tarjetas)
+   */
+  calcularPatrimonio(monedaDestino = 'PEN') {
+    let activos = 0;
+    let pasivos = 0;
+    
+    // Activos: cuentas (no de crédito) + metas
+    const cuentas = this.obtenerCuentas().filter(c => c.tipo !== 'credito');
+    cuentas.forEach(c => {
+      activos += Formato.convertir(c.saldo, c.moneda, monedaDestino);
+    });
+    
+    const metas = this.obtenerMetas({ activas: true });
+    metas.forEach(m => {
+      activos += Formato.convertir(m.montoActual, m.moneda, monedaDestino);
+    });
+    
+    // Pasivos: saldos pendientes de deudas + saldos usados de tarjetas
+    const deudas = this.obtenerDeudas({ activos: true });
+    deudas.forEach(d => {
+      const saldo = this.calcularSaldoDeuda(d);
+      pasivos += Formato.convertir(saldo, d.moneda, monedaDestino);
+    });
+    
+    const tarjetas = this.obtenerTarjetas();
+    tarjetas.forEach(t => {
+      pasivos += Formato.convertir(t.usado || 0, t.moneda, monedaDestino);
+    });
+    
+    return {
+      activos,
+      pasivos,
+      neto: activos - pasivos,
+    };
+  },
+  
+  /**
+   * Calcula score de salud financiera (0-100)
+   * Factores:
+   * - Tasa de ahorro (peso 30%)
+   * - Ratio deudas/ingresos (peso 25%)
+   * - Tener fondo de emergencia (peso 20%)
+   * - Consistencia de presupuestos (peso 15%)
+   * - Diversidad de cuentas (peso 10%)
+   */
+  calcularSaludFinanciera(monedaDestino = 'PEN') {
+    let score = 0;
+    const recomendaciones = [];
+    
+    const hoy = new Date();
+    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    
+    const kpis = this.calcularKPIs(inicioMes, finMes, monedaDestino);
+    
+    // 1. Tasa de ahorro (30 pts)
+    if (kpis.totalIngresos > 0) {
+      const tasa = kpis.tasaAhorro;
+      if (tasa >= 0.20) {
+        score += 30;
+      } else if (tasa >= 0.10) {
+        score += 20;
+        recomendaciones.push('Intenta aumentar tu tasa de ahorro al 20% o más');
+      } else if (tasa >= 0) {
+        score += 10;
+        recomendaciones.push('Estás ahorrando poco. Revisa tus gastos para aumentar el ahorro');
+      } else {
+        recomendaciones.push('⚠ Estás gastando más de lo que ingresas este mes');
+      }
+    } else {
+      recomendaciones.push('Registra tus ingresos para tener un mejor análisis');
+    }
+    
+    // 2. Ratio deudas/ingresos (25 pts)
+    const patrimonio = this.calcularPatrimonio(monedaDestino);
+    if (kpis.totalIngresos > 0) {
+      const ratioDeudas = patrimonio.pasivos / (kpis.totalIngresos * 12);
+      if (ratioDeudas <= 0.3) {
+        score += 25;
+      } else if (ratioDeudas <= 0.5) {
+        score += 15;
+        recomendaciones.push('Tus deudas son moderadas. Prioriza pagarlas');
+      } else if (ratioDeudas <= 1) {
+        score += 8;
+        recomendaciones.push('⚠ Tus deudas son altas comparadas con tus ingresos anuales');
+      } else {
+        recomendaciones.push('🚨 Sobreendeudamiento. Considera reestructurar tus deudas');
+      }
+    } else if (patrimonio.pasivos === 0) {
+      score += 25; // Sin deudas es bueno
+    }
+    
+    // 3. Fondo de emergencia (20 pts)
+    const metas = this.obtenerMetas({ activas: true });
+    const tieneEmergencia = metas.some(m => 
+      m.nombre.toLowerCase().includes('emergencia') && m.montoActual >= m.montoObjetivo * 0.5
+    );
+    if (tieneEmergencia) {
+      score += 20;
+    } else {
+      const tieneInicio = metas.some(m => m.nombre.toLowerCase().includes('emergencia'));
+      if (tieneInicio) {
+        score += 10;
+        recomendaciones.push('Sigue construyendo tu fondo de emergencia');
+      } else {
+        recomendaciones.push('Crea un fondo de emergencia (3-6 meses de gastos)');
+      }
+    }
+    
+    // 4. Consistencia de presupuestos (15 pts)
+    const presupuestos = this.obtenerPresupuestos(hoy.getMonth() + 1, hoy.getFullYear());
+    if (presupuestos.length > 0) {
+      const respetados = presupuestos.filter(p => {
+        const gastado = this.calcularGastadoEnCategoria(p.categoriaId, hoy.getMonth() + 1, hoy.getFullYear(), p.moneda);
+        return gastado <= p.monto;
+      });
+      const ratio = respetados.length / presupuestos.length;
+      score += Math.round(15 * ratio);
+      
+      if (ratio < 0.7) {
+        recomendaciones.push('Estás excediendo varios presupuestos. Revisa tus categorías');
+      }
+    } else {
+      recomendaciones.push('Crea presupuestos mensuales para controlar mejor tus gastos');
+    }
+    
+    // 5. Diversidad de cuentas (10 pts)
+    const cuentas = this.obtenerCuentas().filter(c => c.tipo !== 'credito');
+    if (cuentas.length >= 3) {
+      score += 10;
+    } else if (cuentas.length >= 2) {
+      score += 6;
+    } else if (cuentas.length === 1) {
+      score += 3;
+      recomendaciones.push('Considera tener al menos una cuenta de ahorros');
+    }
+    
+    score = Math.min(100, Math.round(score));
+    
+    let nivel, descripcion;
+    if (score >= 80) {
+      nivel = 'excelente';
+      descripcion = '¡Excelente! Tus finanzas están muy bien manejadas.';
+    } else if (score >= 60) {
+      nivel = 'bueno';
+      descripcion = 'Vas bien. Pequeños ajustes pueden llevarte al siguiente nivel.';
+    } else if (score >= 40) {
+      nivel = 'regular';
+      descripcion = 'Hay oportunidades de mejora en tu salud financiera.';
+    } else {
+      nivel = 'malo';
+      descripcion = 'Es momento de tomar acción. Empieza con los pasos más sencillos.';
+    }
+    
+    return {
+      score,
+      nivel,
+      descripcion,
+      recomendaciones: recomendaciones.slice(0, 4), // Top 4
+    };
+  },
+  
+  /**
+   * Genera datos para heatmap de gastos diarios (último año)
+   */
+  generarHeatmapDatos(monedaDestino = 'PEN') {
+    const hoy = new Date();
+    const haceUnAno = new Date(hoy);
+    haceUnAno.setDate(haceUnAno.getDate() - 364);
+    
+    const trans = this.obtenerTransaccionesEnRango(haceUnAno, hoy, 'egreso');
+    
+    // Agrupar por día
+    const porDia = {};
+    trans.forEach(t => {
+      const key = t.fecha;
+      if (!porDia[key]) porDia[key] = 0;
+      porDia[key] += Formato.convertir(t.monto, t.moneda, monedaDestino);
+    });
+    
+    // Calcular escala (percentil 95 para no sesgar con outliers)
+    const valores = Object.values(porDia).sort((a, b) => a - b);
+    const max = valores.length > 0 ? valores[Math.floor(valores.length * 0.95)] : 100;
+    
+    return { porDia, max, fechaInicio: haceUnAno };
   },
   
   /* ========== UTILIDADES ========== */

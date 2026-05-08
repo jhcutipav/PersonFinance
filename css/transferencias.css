@@ -1,0 +1,321 @@
+/* ============================================
+   PÁGINA: TRANSFERENCIAS
+   ============================================ */
+
+.transferencias-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Stats arriba */
+.transf-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+/* Filtro por cuenta */
+.transf-filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.transf-filter-info {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.transf-filter-info strong { color: var(--text-primary); }
+
+.transf-filter-select {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  outline: none;
+  min-width: 200px;
+}
+
+/* Lista de transferencias */
+.transf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transf-item {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: var(--space-md);
+  align-items: center;
+  transition: all var(--transition-fast);
+}
+
+.transf-item:hover {
+  border-color: var(--accent-primary);
+}
+
+.transf-item-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.2), rgba(6, 182, 212, 0.1));
+  border: 1px solid rgba(20, 240, 205, 0.3);
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.transf-item-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.transf-item-cuentas {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex-wrap: wrap;
+}
+
+.transf-cuenta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--card-bg-secondary);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+}
+
+.transf-arrow {
+  color: var(--accent-primary);
+  font-size: 1rem;
+}
+
+.transf-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transf-item-amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.transf-item-amount-main {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.transf-item-amount-converted {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.transf-item-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.transf-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.transf-action-btn:hover {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* Empty state */
+.transf-empty {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-tertiary);
+}
+
+.transf-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: var(--space-md);
+  opacity: 0.5;
+}
+
+.transf-empty h3 {
+  font-size: 1.125rem;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.transf-empty p {
+  font-size: 0.875rem;
+  margin-bottom: var(--space-lg);
+}
+
+/* ============ MODAL DE TRANSFERENCIA ============ */
+.transf-modal-flow {
+  background: var(--card-bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.transf-modal-cuenta-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.transf-modal-cuenta-label {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.transf-modal-cuenta-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.transf-modal-cuenta-saldo {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.transf-modal-cuenta-saldo.bajo {
+  color: var(--color-warning);
+}
+
+.transf-modal-cuenta-saldo.insuficiente {
+  color: var(--color-danger);
+}
+
+.transf-modal-arrow-big {
+  font-size: 2rem;
+  color: var(--accent-primary);
+  text-align: center;
+}
+
+.transf-modal-conversion-info {
+  background: rgba(20, 240, 205, 0.08);
+  border: 1px solid rgba(20, 240, 205, 0.2);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: var(--space-md);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.transf-modal-conversion-info strong {
+  color: var(--accent-primary);
+}
+
+/* Quick amount buttons */
+.transf-quick-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: var(--space-md);
+}
+
+.transf-quick-btn {
+  padding: 8px;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  transition: all var(--transition-fast);
+}
+
+.transf-quick-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .transf-stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .transf-item {
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+  }
+  
+  .transf-item-amount,
+  .transf-item-actions {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+  
+  .transf-item-actions {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  
+  .transf-modal-flow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .transf-modal-arrow-big {
+    transform: rotate(90deg);
+    font-size: 1.5rem;
+  }
+}

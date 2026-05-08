@@ -1,0 +1,421 @@
+/* ============================================
+   PÁGINA: PRESUPUESTOS
+   ============================================ */
+
+.presupuestos-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Selector de mes y año */
+.presupuestos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.month-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-full);
+  padding: 4px;
+}
+
+.month-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  font-size: 16px;
+}
+
+.month-nav-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.month-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.month-current {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0 12px;
+  min-width: 130px;
+  text-align: center;
+}
+
+/* Resumen general */
+.presup-summary {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.presup-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.presup-summary-title {
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.presup-summary-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.presup-summary-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-lg);
+  align-items: center;
+  text-align: center;
+}
+
+.presup-summary-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.presup-summary-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.presup-summary-stat-value.spent { color: var(--text-primary); }
+.presup-summary-stat-value.available { color: var(--accent-primary); }
+.presup-summary-stat-value.over { color: var(--color-danger); }
+
+.presup-summary-bar {
+  margin-top: var(--space-md);
+}
+
+.presup-summary-bar-track {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.presup-summary-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.presup-summary-bar-fill.green { background: linear-gradient(90deg, #10B981, #14F0CD); }
+.presup-summary-bar-fill.amber { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.presup-summary-bar-fill.red { background: linear-gradient(90deg, #EF4444, #F472B6); }
+
+.presup-summary-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.presup-summary-bar-meta strong {
+  color: var(--text-primary);
+}
+
+/* Toolbar */
+.presup-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.presup-toolbar-info {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.presup-toolbar-info strong {
+  color: var(--text-primary);
+}
+
+/* Grid de presupuestos */
+.presupuestos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--space-md);
+}
+
+.presup-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.presup-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.presup-card.over {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.presup-card.warning {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.presup-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.presup-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.presup-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.presup-card-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.presup-card-meta {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+.presup-card-percent {
+  font-size: 0.875rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.presup-card-percent.green {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-success);
+}
+
+.presup-card-percent.amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-warning);
+}
+
+.presup-card-percent.red {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger);
+}
+
+.presup-card-amounts {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.presup-card-spent {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.presup-card-budget {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+}
+
+.presup-card-progress {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.presup-card-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.presup-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--card-border);
+  font-size: 0.75rem;
+}
+
+.presup-card-remaining {
+  color: var(--text-tertiary);
+}
+
+.presup-card-remaining strong {
+  color: var(--text-primary);
+}
+
+.presup-card-pace {
+  font-size: 0.75rem;
+}
+
+.presup-card-pace.good { color: var(--color-success); }
+.presup-card-pace.warning { color: var(--color-warning); }
+.presup-card-pace.bad { color: var(--color-danger); }
+
+/* Empty state */
+.presup-empty {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-md);
+  background: var(--card-bg);
+  border: 1px dashed var(--card-border);
+  border-radius: var(--radius-lg);
+  color: var(--text-tertiary);
+}
+
+.presup-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: var(--space-md);
+  opacity: 0.5;
+}
+
+.presup-empty h3 {
+  font-size: 1.125rem;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.presup-empty p {
+  font-size: 0.875rem;
+  margin-bottom: var(--space-lg);
+}
+
+.presup-empty-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ============ MODAL DE PLANTILLAS ============ */
+.plantillas-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.plantilla-card {
+  background: var(--card-bg-secondary);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.plantilla-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.plantilla-card.selected {
+  border-color: var(--accent-primary);
+  background: rgba(20, 240, 205, 0.1);
+}
+
+.plantilla-icon {
+  font-size: 1.75rem;
+  margin-bottom: 8px;
+}
+
+.plantilla-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.plantilla-desc {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .presup-summary-detail {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .presupuestos-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .presupuestos-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .presup-summary-detail {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+    text-align: left;
+  }
+  
+  .presup-summary-amount {
+    font-size: 1.5rem;
+  }
+  
+  .plantillas-grid {
+    grid-template-columns: 1fr;
+  }
+}

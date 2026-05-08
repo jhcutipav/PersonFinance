@@ -63,8 +63,24 @@ const Storage = {
       this.guardar('categorias', MockData.categorias);
       this.guardar('transacciones', MockData.transacciones);
       this.guardar('presupuestos', MockData.presupuestos);
+      this.guardar('gastosFijos', MockData.gastosFijos);
+      this.guardar('deudas', MockData.deudas);
+      this.guardar('metas', MockData.metas);
       this.guardar('inicializado', true);
       console.log('✓ App inicializada con datos seed');
+    } else if (!this.cargar('gastosFijos')) {
+      // Migrar: agregar gastos fijos si no existían (versión anterior)
+      this.guardar('gastosFijos', MockData.gastosFijos);
+    }
+    
+    // Migración: deudas
+    if (!this.cargar('deudas')) {
+      this.guardar('deudas', MockData.deudas);
+    }
+    
+    // Migración: metas
+    if (!this.cargar('metas')) {
+      this.guardar('metas', MockData.metas);
     }
   },
   
