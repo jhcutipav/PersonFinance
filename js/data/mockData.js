@@ -9,7 +9,7 @@ const MockData = {
   
   usuario: {
     id: 1,
-    nombre: 'Daniel',
+    nombre: 'Neyo - Pruebas',
     email: 'daniel@ejemplo.com',
     monedaPrincipal: 'PEN',
   },
