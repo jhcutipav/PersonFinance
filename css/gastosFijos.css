@@ -101,7 +101,7 @@
   flex-shrink: 0;
 }
 
-.gasto-stat-icon.cyan { background: linear-gradient(135deg, #14F0CD, #06B6D4); }
+.gasto-stat-icon.cyan { background: linear-gradient(135deg, #14F0CD, #06B6D4); color: #0A0E1A; }
 .gasto-stat-icon.purple { background: linear-gradient(135deg, #8B5CF6, #6366F1); color: white; }
 .gasto-stat-icon.amber { background: linear-gradient(135deg, #F59E0B, #EF4444); color: white; }
 .gasto-stat-icon.green { background: linear-gradient(135deg, #10B981, #14F0CD); color: #0A0E1A; }
@@ -384,6 +384,30 @@
   .gastos-stats-row {
     grid-template-columns: repeat(2, 1fr);
   }
+  
+  .grafico-variacion-canvas {
+    height: 240px;
+  }
+  
+  .gastos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .grafico-variacion-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .grafico-variacion-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  
+  .vista-pill {
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 600px) {
@@ -412,5 +436,15 @@
   
   .gasto-filter-pill {
     flex-shrink: 0;
+  }
+  
+  .gasto-card-header {
+    flex-wrap: wrap;
+  }
+  
+  .gasto-card-amount {
+    flex-basis: 100%;
+    text-align: left;
+    margin-top: 8px;
   }
 }

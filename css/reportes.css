@@ -563,13 +563,40 @@
     grid-template-columns: 1fr;
     gap: 12px;
   }
+  
+  /* Salud financiera en tablet */
+  .salud-score-container {
+    grid-template-columns: 120px 1fr;
+  }
+  
+  .salud-score-circle {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .reportes-header {
+    gap: 12px;
+  }
+  
+  .periodo-rango-info {
+    width: 100%;
+    text-align: center;
+  }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+  /* Habitos en 2 columnas en tablet */
+  .habitos-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  /* KPIs apilados en móvil */
   .kpis-grid {
     grid-template-columns: 1fr;
   }
-  
+}
+
+@media (max-width: 600px) {
   .reportes-header {
     flex-direction: column;
     align-items: stretch;
@@ -587,6 +614,7 @@
   .salud-score-container {
     grid-template-columns: 1fr;
     text-align: center;
+    gap: 12px;
   }
   
   .salud-score-circle {

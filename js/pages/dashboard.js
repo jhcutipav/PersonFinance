@@ -8,6 +8,7 @@ const Dashboard = {
   monedaVista: 'PEN',
   tabActiva: 'activity', // activity | spending | income
   historyTab: 'history', // history | upcoming
+  filtroActividad: 'todas', // 'todas' | 'cuenta_X' | 'tarjeta_X'
   
   render(container, monedaVista = 'PEN') {
     this.monedaVista = monedaVista;
@@ -33,7 +34,7 @@ const Dashboard = {
     `;
     
     setTimeout(() => {
-      Graficos.gastosDiarios('chartActivity');
+      this.renderChartActividad();
       this.renderSparklinesFavorites();
     }, 50);
     
@@ -270,38 +271,204 @@ const Dashboard = {
   
   renderActivityGraph() {
     const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
-    let total = 0;
-    let titulo = 'Egresos';
     
-    if (this.tabActiva === 'income') {
-      total = API.calcularIngresosMes(moneda);
-      titulo = 'Ingresos';
-    } else if (this.tabActiva === 'spending') {
-      total = API.calcularEgresosMes(moneda);
-      titulo = 'Egresos';
-    } else {
-      total = API.calcularEgresosMes(moneda);
-      titulo = 'Actividad';
-    }
+    const cuentas = API.obtenerCuentas();
+    const tarjetas = API.obtenerTarjetas();
+    
+    // Calcular total según filtro y tab
+    const totalCalc = this.calcularTotalActividad();
+    let titulo = 'Actividad';
+    if (this.tabActiva === 'income') titulo = 'Ingresos';
+    else if (this.tabActiva === 'spending') titulo = 'Egresos';
+    else titulo = 'Egresos';
     
     const ahora = new Date();
     const inicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
     const rango = `${Fechas.formatoCorto(inicio)} - ${Fechas.formatoCorto(ahora)}`;
     
+    // Nombre del filtro actual para mostrar
+    let nombreFiltro = 'Todas las cuentas';
+    if (this.filtroActividad.startsWith('cuenta_')) {
+      const id = parseInt(this.filtroActividad.split('_')[1]);
+      const c = cuentas.find(c => c.id === id);
+      if (c) nombreFiltro = c.nombre;
+    } else if (this.filtroActividad.startsWith('tarjeta_')) {
+      const id = parseInt(this.filtroActividad.split('_')[1]);
+      const t = tarjetas.find(t => t.id === id);
+      if (t) nombreFiltro = t.nombre;
+    }
+    
     return `
       <div class="activity-graph-card">
         <div class="activity-graph-header">
-          <div>
+          <div style="flex:1; min-width:0;">
             <div class="activity-graph-title">${titulo} del mes</div>
-            <div class="activity-graph-amount">${Formato.formatearMoneda(total, moneda)}</div>
+            <div class="activity-graph-amount">${Formato.formatearMoneda(totalCalc, moneda)}</div>
+            <div style="font-size:0.6875rem; color:var(--text-tertiary); margin-top:4px;">
+              ${nombreFiltro}
+            </div>
           </div>
-          <div class="activity-graph-period">Entre<br>${rango}</div>
+          <div class="activity-graph-period" style="text-align:right;">
+            <select class="form-select" id="filtroActividad" 
+                    style="padding:6px 28px 6px 10px; font-size:0.75rem; min-width:140px; max-width:160px; margin-bottom:6px;">
+              <option value="todas" ${this.filtroActividad === 'todas' ? 'selected' : ''}>📊 Todas las cuentas</option>
+              ${cuentas.length > 0 ? `<optgroup label="Cuentas">
+                ${cuentas.map(c => `
+                  <option value="cuenta_${c.id}" ${this.filtroActividad === `cuenta_${c.id}` ? 'selected' : ''}>
+                    ${c.nombre}
+                  </option>
+                `).join('')}
+              </optgroup>` : ''}
+              ${tarjetas.length > 0 ? `<optgroup label="Tarjetas">
+                ${tarjetas.map(t => `
+                  <option value="tarjeta_${t.id}" ${this.filtroActividad === `tarjeta_${t.id}` ? 'selected' : ''}>
+                    💳 ${t.nombre}
+                  </option>
+                `).join('')}
+              </optgroup>` : ''}
+            </select>
+            <div style="font-size:0.6875rem; color:var(--text-tertiary);">${rango}</div>
+          </div>
         </div>
         <div class="activity-graph-canvas">
           <canvas id="chartActivity"></canvas>
         </div>
       </div>
     `;
+  },
+  
+  /**
+   * Calcula el total a mostrar arriba del gráfico según filtro y tab
+   */
+  calcularTotalActividad() {
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    const ahora = new Date();
+    const trans = this.obtenerTransaccionesFiltradas(
+      new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0],
+      ahora.toISOString().split('T')[0]
+    );
+    
+    let filtradas = trans;
+    if (this.tabActiva === 'income') {
+      filtradas = trans.filter(t => t.tipo === 'ingreso');
+    } else {
+      filtradas = trans.filter(t => t.tipo === 'egreso');
+    }
+    
+    return Formato.sumarEnMoneda(filtradas, moneda);
+  },
+  
+  /**
+   * Aplica el filtro de cuenta/tarjeta a las transacciones
+   */
+  obtenerTransaccionesFiltradas(fechaInicio, fechaFin) {
+    let trans = API.obtenerTransaccionesEnRango(fechaInicio, fechaFin);
+    
+    if (this.filtroActividad.startsWith('cuenta_')) {
+      const id = parseInt(this.filtroActividad.split('_')[1]);
+      trans = trans.filter(t => t.cuentaId === id);
+    } else if (this.filtroActividad.startsWith('tarjeta_')) {
+      const id = parseInt(this.filtroActividad.split('_')[1]);
+      trans = trans.filter(t => t.tarjetaId === id);
+    }
+    
+    return trans;
+  },
+  
+  /**
+   * Renderiza el gráfico de actividad con el filtro aplicado
+   */
+  renderChartActividad() {
+    const canvas = document.getElementById('chartActivity');
+    if (!canvas) return;
+    
+    Graficos.destruir('chartActivity');
+    
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    const ahora = new Date();
+    const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+    
+    // Obtener transacciones filtradas del mes actual
+    const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const fechaFin = ahora.toISOString().split('T')[0];
+    let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+    
+    // Filtrar por tipo según tab
+    if (this.tabActiva === 'income') {
+      trans = trans.filter(t => t.tipo === 'ingreso');
+    } else {
+      trans = trans.filter(t => t.tipo === 'egreso');
+    }
+    
+    // Agrupar por día
+    const datosPorDia = new Array(diasEnMes).fill(0);
+    trans.forEach(t => {
+      const dia = new Date(t.fecha).getDate();
+      datosPorDia[dia - 1] += Formato.convertir(t.monto, t.moneda, moneda);
+    });
+    
+    const labels = Array.from({ length: diasEnMes }, (_, i) => i + 1);
+    const colorTema = Theme.coloresGrafico();
+    
+    const ctx = canvas.getContext('2d');
+    const colorPrincipal = this.tabActiva === 'income' ? '#10B981' : '#14F0CD';
+    const colorRgb = this.tabActiva === 'income' ? '16, 185, 129' : '20, 240, 205';
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, `rgba(${colorRgb}, 0.3)`);
+    gradient.addColorStop(1, `rgba(${colorRgb}, 0)`);
+    
+    Graficos.instancias['chartActivity'] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: datosPorDia,
+          borderColor: colorPrincipal,
+          backgroundColor: gradient,
+          borderWidth: 2.5,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointBackgroundColor: colorPrincipal,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 41, 0.95)',
+            titleColor: '#fff',
+            bodyColor: 'rgba(255, 255, 255, 0.85)',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              title: (items) => `Día ${items[0].label}`,
+              label: (item) => `${this.tabActiva === 'income' ? 'Ingreso' : 'Gasto'}: ${Formato.formatearMoneda(item.parsed.y, moneda)}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: colorTema.grid },
+            ticks: { color: colorTema.textSecondary, font: { size: 10 } },
+          },
+          y: {
+            grid: { color: colorTema.grid },
+            ticks: {
+              color: colorTema.textSecondary,
+              font: { size: 10 },
+              callback: (val) => Formato.formatearMoneda(val, moneda).replace('.00', ''),
+            },
+          },
+        },
+      },
+    });
   },
   
   renderShortcuts() {
@@ -688,5 +855,16 @@ const Dashboard = {
         });
       });
     });
+    
+    // Filtro de actividad por cuenta/tarjeta
+    const filtroEl = document.getElementById('filtroActividad');
+    if (filtroEl) {
+      filtroEl.addEventListener('change', (e) => {
+        this.filtroActividad = e.target.value;
+        // Re-renderizar solo el card del gráfico para evitar parpadeo
+        const container = document.getElementById('pageContent');
+        if (container) this.render(container, this.monedaVista);
+      });
+    }
   },
 };

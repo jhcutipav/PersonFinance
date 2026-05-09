@@ -397,7 +397,7 @@
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   color: var(--text-primary);
-  padding: 10px 14px;
+  padding: 10px 36px 10px 14px;
   border-radius: var(--radius-full);
   font-family: inherit;
   font-size: 0.8125rem;
@@ -418,6 +418,20 @@
   
   .header-date {
     display: none;
+  }
+  
+  /* En tablet, header-search se encoge */
+  .header-search {
+    max-width: 240px;
+  }
+  
+  /* Profile compacto */
+  .header-profile-info {
+    display: none;
+  }
+  
+  .header-profile {
+    padding: 4px;
   }
 }
 
@@ -475,18 +489,62 @@
     display: flex;
   }
   
+  /* Ocultar el toggle del sidebar en móvil (no aplica) */
+  .sidebar-toggle {
+    display: none;
+  }
+  
   .main {
     padding: var(--space-md);
+  }
+  
+  /* Header en móvil: reorganizar */
+  .header {
+    gap: 8px;
   }
   
   .header-search {
     order: 4;
     width: 100%;
     max-width: none;
+    flex-basis: 100%;
   }
   
   .header-icon-btn {
     width: 38px;
     height: 38px;
+  }
+  
+  /* Selector moneda más pequeño */
+  .currency-select {
+    padding: 8px 28px 8px 10px;
+    font-size: 0.75rem;
+    min-width: 0;
+  }
+  
+  /* Botón nueva más compacto */
+  .btn-primary span:not(.btn-icon) {
+    display: none;
+  }
+  
+  .btn-primary {
+    padding: 10px 14px;
+  }
+  
+  /* Theme toggle siempre visible */
+  .theme-toggle {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* En móvil muy pequeño, ocultar notificaciones y mostrar solo lo esencial */
+  .header {
+    flex-wrap: wrap;
+  }
+  
+  .header > .header-icon-btn:not(.theme-toggle) {
+    display: none;
   }
 }

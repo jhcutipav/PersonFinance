@@ -147,6 +147,7 @@
 
 .stat-card-icon.cyan {
   background: linear-gradient(135deg, #14F0CD, #06B6D4);
+  color: #0A0E1A;
 }
 
 .stat-card-icon.green {
@@ -1070,16 +1071,39 @@
     grid-template-columns: 1fr;
   }
   
+  /* En tablet, la actividad y aside van debajo */
+  .dashboard-aside {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+  }
+  
   .card-slide.is-prev {
     transform: translate(calc(-50% - 130px), -50%) scale(0.7);
   }
   .card-slide.is-next {
     transform: translate(calc(-50% + 130px), -50%) scale(0.7);
   }
+  
+  /* Greeting bar más compacto */
+  .greeting-text {
+    font-size: 1.125rem;
+  }
+  
+  /* History tabs */
+  .history-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .history-date-selector {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
-@media (max-width: 600px) {
-  .stats-left, .stats-right {
+@media (max-width: 768px) {
+  /* En móvil, aside es de 1 columna */
+  .dashboard-aside {
     grid-template-columns: 1fr;
   }
   
@@ -1097,6 +1121,12 @@
   .summary-tab {
     white-space: nowrap;
     font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-left, .stats-right {
+    grid-template-columns: 1fr;
   }
   
   .cards-slider {
@@ -1128,12 +1158,31 @@
     grid-template-columns: 1fr;
   }
   
-  .history-tabs {
+  /* History más compacto */
+  .history-item {
     flex-wrap: wrap;
   }
   
-  .history-date-selector {
-    margin-left: 0;
-    width: 100%;
+  .history-item-tag {
+    font-size: 0.625rem;
+    padding: 2px 6px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .stat-card-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .stat-card-value {
+    font-size: 0.9375rem;
+  }
+  
+  .stat-card-label {
+    font-size: 0.6875rem;
   }
 }

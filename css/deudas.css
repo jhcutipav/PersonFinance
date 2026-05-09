@@ -462,6 +462,27 @@
   .deudas-stats-row {
     grid-template-columns: 1fr;
   }
+  
+  .deudas-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .cronograma-table {
+    font-size: 0.75rem;
+  }
+  
+  .cronograma-table thead th,
+  .cronograma-table tbody td {
+    padding: 8px;
+  }
+  
+  /* Ocultar columnas no esenciales en pantalla pequeña */
+  .cronograma-table thead th:nth-child(3),
+  .cronograma-table tbody td:nth-child(3) {
+    display: none;
+  }
 }
 
 @media (max-width: 600px) {
@@ -477,12 +498,11 @@
     grid-template-columns: 1fr;
   }
   
-  .cronograma-table {
-    font-size: 0.75rem;
-  }
-  
-  .cronograma-table thead th,
-  .cronograma-table tbody td {
-    padding: 6px 8px;
+  /* Más columnas ocultas en móvil */
+  .cronograma-table thead th:nth-child(2),
+  .cronograma-table tbody td:nth-child(2),
+  .cronograma-table thead th:nth-child(7),
+  .cronograma-table tbody td:nth-child(7) {
+    display: none;
   }
 }

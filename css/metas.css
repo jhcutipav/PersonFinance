@@ -36,7 +36,7 @@
   flex-shrink: 0;
 }
 
-.meta-stat-icon.cyan { background: linear-gradient(135deg, #14F0CD, #06B6D4); }
+.meta-stat-icon.cyan { background: linear-gradient(135deg, #14F0CD, #06B6D4); color: #0A0E1A; }
 .meta-stat-icon.green { background: linear-gradient(135deg, #10B981, #14F0CD); color: #0A0E1A; }
 .meta-stat-icon.purple { background: linear-gradient(135deg, #8B5CF6, #6366F1); color: white; }
 .meta-stat-icon.amber { background: linear-gradient(135deg, #F59E0B, #EF4444); color: white; }
@@ -514,6 +514,20 @@
 @media (max-width: 1024px) {
   .metas-stats-row {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .metas-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .metas-toolbar {
+    gap: 12px;
+  }
+  
+  .metas-plantillas-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

@@ -393,6 +393,25 @@
   .presup-summary-detail {
     grid-template-columns: 1fr 1fr;
   }
+  
+  .presupuestos-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .presupuestos-header {
+    gap: 12px;
+  }
+  
+  .presup-summary-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .presup-summary-detail {
+    width: 100%;
+  }
 }
 
 @media (max-width: 600px) {
