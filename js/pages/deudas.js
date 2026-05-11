@@ -701,7 +701,7 @@ const Deudas = {
     const deuda = API.obtenerDeudaPorId(deudaId);
     if (!deuda) return;
     
-    const cronograma = Prestamos.generarCronograma(deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema, deuda.fechaInicio);
+    const cronograma = API.obtenerCronogramaConOverrides(deuda);
     const resumen = Prestamos.calcularResumen(cronograma);
     const saldoPendiente = API.calcularSaldoDeuda(deuda);
     
@@ -728,6 +728,10 @@ const Deudas = {
           </div>
         </div>
         
+        <p style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:8px;">
+          💡 Tip: Haz click en ✏️ para ajustar manualmente el monto de una cuota específica.
+        </p>
+        
         <div class="cronograma-table-wrapper" style="margin:0;padding:0;max-height:400px;overflow-y:auto;">
           <table class="cronograma-table">
             <thead>
@@ -738,6 +742,7 @@ const Deudas = {
                 <th>Interés</th>
                 <th>Cuota</th>
                 <th>Saldo</th>
+                <th style="width:40px;"></th>
               </tr>
             </thead>
             <tbody>
@@ -747,8 +752,20 @@ const Deudas = {
                   <td>${c.fecha ? Fechas.formatoCorto(c.fecha) : '-'}</td>
                   <td>${Formato.formatearMoneda(c.amortizacion, deuda.moneda)}</td>
                   <td style="color:var(--color-danger);">${Formato.formatearMoneda(c.interes, deuda.moneda)}</td>
-                  <td><strong>${Formato.formatearMoneda(c.cuota, deuda.moneda)}</strong></td>
+                  <td>
+                    <strong${c.esOverride ? ' style="color:var(--accent-primary);"' : ''}>
+                      ${Formato.formatearMoneda(c.cuota, deuda.moneda)}
+                    </strong>
+                    ${c.esOverride ? ' <span style="font-size:0.625rem;color:var(--accent-primary);">✏️</span>' : ''}
+                  </td>
                   <td>${Formato.formatearMoneda(c.saldoFinal, deuda.moneda)}</td>
+                  <td>
+                    <button onclick="event.stopPropagation(); Deudas.editarCuota(${deuda.id}, ${c.numero})" 
+                            style="background:transparent;border:none;color:var(--text-tertiary);cursor:pointer;padding:4px;font-size:0.875rem;" 
+                            title="Editar monto de esta cuota">
+                      ✏️
+                    </button>
+                  </td>
                 </tr>
               `).join('')}
             </tbody>
@@ -762,6 +779,86 @@ const Deudas = {
         </div>
       `,
     });
+  },
+  
+  /**
+   * Abre modal para editar el monto de una cuota específica
+   */
+  editarCuota(deudaId, numeroCuota) {
+    const deuda = API.obtenerDeudaPorId(deudaId);
+    if (!deuda) return;
+    
+    const cronograma = API.obtenerCronogramaConOverrides(deuda);
+    const cuota = cronograma.find(c => c.numero === numeroCuota);
+    if (!cuota) return;
+    
+    Modal.abrir({
+      titulo: `Editar cuota #${numeroCuota}`,
+      ancho: 'small',
+      contenido: `
+        <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:var(--space-md);">
+          Modificar el monto de la cuota <strong>#${numeroCuota}</strong> de 
+          <strong>${deuda.nombre}</strong>.
+        </p>
+        
+        <div style="background:var(--card-bg-secondary);padding:12px;border-radius:var(--radius-md);margin-bottom:var(--space-md);font-size:0.8125rem;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span>Monto original:</span>
+            <strong>${Formato.formatearMoneda(cuota.cuota, deuda.moneda)}</strong>
+          </div>
+          ${cuota.fecha ? `
+            <div style="display:flex;justify-content:space-between;color:var(--text-tertiary);">
+              <span>Fecha:</span>
+              <span>${Fechas.formatoCompleto(cuota.fecha)}</span>
+            </div>
+          ` : ''}
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Nuevo monto</label>
+          <div class="trans-modal-amount" style="margin:0;">
+            <input type="number" id="nuevoCuotaMonto" class="trans-modal-amount-input" 
+                   placeholder="0.00" step="0.01" min="0" 
+                   value="${cuota.cuota.toFixed(2)}" inputmode="decimal" autofocus>
+            <div class="trans-modal-amount-currency">${Formato.SIMBOLOS[deuda.moneda] || deuda.moneda}</div>
+          </div>
+          <div class="form-helper">⚠ Solo cambia el monto de esta cuota específica. No afecta las demás.</div>
+        </div>
+        
+        <div class="modal-actions">
+          ${cuota.esOverride ? `
+            <button type="button" class="btn-secondary" id="btnRestaurarCuota">Restaurar original</button>
+          ` : ''}
+          <button type="button" class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
+          <button type="button" class="btn-primary" id="btnGuardarCuota">Guardar</button>
+        </div>
+      `,
+    });
+    
+    document.getElementById('btnGuardarCuota').addEventListener('click', () => {
+      const monto = parseFloat(document.getElementById('nuevoCuotaMonto').value);
+      if (!monto || monto < 0) {
+        Modal.toast('Monto inválido', 'error');
+        return;
+      }
+      
+      API.guardarOverrideCuota(deudaId, numeroCuota, monto);
+      Modal.toast(`✓ Cuota #${numeroCuota} actualizada`);
+      Modal.cerrar();
+      
+      // Reabrir el detalle para mostrar cambios
+      setTimeout(() => this.verDetalle(deudaId), 250);
+    });
+    
+    const btnRestaurar = document.getElementById('btnRestaurarCuota');
+    if (btnRestaurar) {
+      btnRestaurar.addEventListener('click', () => {
+        API.guardarOverrideCuota(deudaId, numeroCuota, null);
+        Modal.toast('✓ Monto original restaurado');
+        Modal.cerrar();
+        setTimeout(() => this.verDetalle(deudaId), 250);
+      });
+    }
   },
   
   eliminarDeuda(deudaId) {

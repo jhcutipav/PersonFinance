@@ -143,17 +143,9 @@ const TarjetaForm = {
         
         <!-- Color tema -->
         <div class="form-group">
-          <label class="form-label">Color del tema</label>
-          <div style="display:flex;gap:8px;">
-            <button type="button" class="theme-pick ${this.estado.colorTema === 'purple' ? 'selected' : ''}" data-tema="purple" 
-                    style="flex:1;padding:12px;border-radius:var(--radius-md);background:linear-gradient(135deg,#7C3AED,#F472B6);border:2px solid ${this.estado.colorTema === 'purple' ? 'white' : 'transparent'};cursor:pointer;color:white;font-family:inherit;">
-              Violeta-Rosa
-            </button>
-            <button type="button" class="theme-pick ${this.estado.colorTema === 'cyan' ? 'selected' : ''}" data-tema="cyan"
-                    style="flex:1;padding:12px;border-radius:var(--radius-md);background:linear-gradient(135deg,#06B6D4,#7C3AED);border:2px solid ${this.estado.colorTema === 'cyan' ? 'white' : 'transparent'};cursor:pointer;color:white;font-family:inherit;">
-              Cyan-Violeta
-            </button>
-          </div>
+          <label class="form-label">Color de identificación</label>
+          ${ColorPicker.render(this.estado.colorTema || 'purple', 'colorTema')}
+          <div class="form-helper">Color para identificarla en gráficos y dashboard</div>
         </div>
         
         <div class="modal-actions">
@@ -226,15 +218,10 @@ const TarjetaForm = {
       if (labelLinea) labelLinea.textContent = `Línea de crédito (${Formato.SIMBOLOS[this.estado.moneda]})`;
     });
     
-    // Tema
-    document.querySelectorAll('.theme-pick').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.estado.colorTema = btn.dataset.tema;
-        document.querySelectorAll('.theme-pick').forEach(b => {
-          b.style.borderColor = b.dataset.tema === this.estado.colorTema ? 'white' : 'transparent';
-        });
-        this.actualizarPreview();
-      });
+    // Color picker
+    ColorPicker.configurar((colorId) => {
+      this.estado.colorTema = colorId;
+      this.actualizarPreview();
     });
     
     // Botones

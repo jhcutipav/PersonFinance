@@ -25,6 +25,25 @@ const Presupuestos = {
   
   /* ============ HEADER (selector de mes) ============ */
   renderHeader() {
+    // Detectar si el mes tiene sobrante (solo mes anterior con presupuestos)
+    const hoy = new Date();
+    const esMesAnterior = (this.mesActual === hoy.getMonth() && this.anioActual === hoy.getFullYear()) ||
+                         (this.mesActual === 12 && this.anioActual === hoy.getFullYear() - 1 && hoy.getMonth() === 0);
+    
+    // Mostrar botón solo si el mes mostrado es el anterior al actual
+    const presupuestos = API.obtenerPresupuestos(this.mesActual, this.anioActual);
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    
+    let sobranteTotal = 0;
+    presupuestos.forEach(p => {
+      const gastado = API.calcularGastadoEnCategoria(p.categoriaId, this.mesActual, this.anioActual, moneda);
+      const monto = Formato.convertir(p.monto, p.moneda, moneda);
+      const sobrante = monto - gastado;
+      if (sobrante > 0) sobranteTotal += sobrante;
+    });
+    
+    const mostrarTraslado = esMesAnterior && sobranteTotal > 0;
+    
     return `
       <div class="presupuestos-header">
         <div class="month-selector">
@@ -33,10 +52,18 @@ const Presupuestos = {
           <button class="month-nav-btn" id="nextMonth" aria-label="Mes siguiente">›</button>
         </div>
         
-        <button class="btn-primary" id="btnNuevoPresup">
-          <span class="btn-icon">+</span>
-          <span>Nuevo presupuesto</span>
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${mostrarTraslado ? `
+            <button class="btn-secondary" id="btnTrasladarSobrante" 
+                    style="border-color:rgba(20, 240, 205, 0.4); color: var(--accent-primary);">
+              💎 Trasladar S/ ${sobranteTotal.toFixed(2)} al próximo mes
+            </button>
+          ` : ''}
+          <button class="btn-primary" id="btnNuevoPresup">
+            <span class="btn-icon">+</span>
+            <span>Nuevo presupuesto</span>
+          </button>
+        </div>
       </div>
     `;
   },
@@ -266,6 +293,9 @@ const Presupuestos = {
     const btnNuevo = document.getElementById('btnNuevoPresup');
     if (btnNuevo) btnNuevo.addEventListener('click', () => this.abrirEditor(null));
     
+    const btnTrasladar = document.getElementById('btnTrasladarSobrante');
+    if (btnTrasladar) btnTrasladar.addEventListener('click', () => this.trasladarSobrante());
+    
     const btnNuevoEmpty = document.getElementById('btnNuevoEmpty');
     if (btnNuevoEmpty) btnNuevoEmpty.addEventListener('click', () => this.abrirEditor(null));
     
@@ -276,6 +306,100 @@ const Presupuestos = {
   refrescar() {
     const container = document.getElementById('pageContent');
     if (container) this.render(container, this.monedaVista);
+  },
+  
+  /* ============ TRASLADAR SOBRANTE ============ */
+  trasladarSobrante() {
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    const presupuestos = API.obtenerPresupuestos(this.mesActual, this.anioActual);
+    
+    // Calcular sobrante por presupuesto
+    const sobrantes = presupuestos.map(p => {
+      const gastado = API.calcularGastadoEnCategoria(p.categoriaId, this.mesActual, this.anioActual, p.moneda);
+      const sobrante = p.monto - gastado;
+      return { ...p, gastado, sobrante };
+    }).filter(p => p.sobrante > 0);
+    
+    if (sobrantes.length === 0) {
+      Modal.toast('No hay sobrantes para trasladar', 'error');
+      return;
+    }
+    
+    // Calcular el próximo mes
+    let proxMes = this.mesActual + 1;
+    let proxAnio = this.anioActual;
+    if (proxMes > 12) {
+      proxMes = 1;
+      proxAnio++;
+    }
+    
+    const totalSobrante = sobrantes.reduce((s, p) => s + p.sobrante, 0);
+    
+    Modal.abrir({
+      titulo: '💎 Trasladar sobrante',
+      contenido: `
+        <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:var(--space-md);">
+          Vas a trasladar el sobrante de <strong>${Fechas.MESES[this.mesActual - 1]} ${this.anioActual}</strong> 
+          al mes de <strong>${Fechas.MESES[proxMes - 1]} ${proxAnio}</strong>.
+        </p>
+        
+        <div style="background: var(--card-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
+          <div style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:8px;">Resumen de sobrantes:</div>
+          ${sobrantes.map(p => {
+            const cat = API.obtenerCategoriaPorId(p.categoriaId);
+            return `
+              <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--card-border);font-size:0.8125rem;">
+                <span>${cat?.icono || ''} ${cat?.nombre || 'Sin categoría'}</span>
+                <span style="color:var(--accent-primary);font-weight:600;">+${Formato.formatearMoneda(p.sobrante, p.moneda)}</span>
+              </div>
+            `;
+          }).join('')}
+          <div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700;font-size:0.9375rem;">
+            <span>Total a trasladar</span>
+            <span style="color:var(--accent-primary);">${Formato.formatearMoneda(totalSobrante, 'PEN')}</span>
+          </div>
+        </div>
+        
+        <p style="font-size:0.8125rem;color:var(--text-tertiary);margin-bottom:var(--space-md);">
+          ℹ️ El sobrante se sumará al presupuesto correspondiente en ${Fechas.MESES[proxMes - 1]}. 
+          Si esa categoría no tiene presupuesto en ese mes, se creará uno con el monto del sobrante.
+        </p>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
+          <button type="button" class="btn-primary" id="btnConfirmarTraslado">Trasladar al próximo mes</button>
+        </div>
+      `,
+    });
+    
+    document.getElementById('btnConfirmarTraslado').addEventListener('click', () => {
+      sobrantes.forEach(p => {
+        // Buscar si ya existe presupuesto para esa categoría en próximo mes
+        const presupuestosProxMes = API.obtenerPresupuestos(proxMes, proxAnio);
+        const existente = presupuestosProxMes.find(pp => pp.categoriaId === p.categoriaId);
+        
+        if (existente) {
+          // Sumar el sobrante al existente
+          API.actualizarPresupuesto(existente.id, {
+            ...existente,
+            monto: existente.monto + p.sobrante,
+          });
+        } else {
+          // Crear nuevo con el monto del sobrante
+          API.crearPresupuesto({
+            categoriaId: p.categoriaId,
+            monto: p.sobrante,
+            moneda: p.moneda,
+            mes: proxMes,
+            anio: proxAnio,
+          });
+        }
+      });
+      
+      Modal.toast(`✓ ${Formato.formatearMoneda(totalSobrante, 'PEN')} trasladados a ${Fechas.MESES[proxMes - 1]}`);
+      Modal.cerrar();
+      this.refrescar();
+    });
   },
   
   /* ============ ACCIONES ============ */

@@ -78,15 +78,16 @@ const Dashboard = {
     
     const saldo = API.calcularSaldoTotal(moneda);
     const ingresos = API.calcularIngresosMes(moneda);
-    const egresos = API.calcularEgresosMes(moneda);
-    const ahorro = API.calcularAhorroMes(moneda);
+    const egresosCash = API.calcularEgresosCashMes(moneda);
+    const egresosTarjeta = API.calcularEgresosTarjetaMes(moneda);
+    const transferencias = API.calcularTransferenciasMes(moneda);
     
     return `
       <div class="stats-card-zone">
         <div class="stats-left">
           <div class="stat-card">
             <div class="stat-card-icon cyan">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </div>
             <div class="stat-card-info">
               <div class="stat-card-label">Saldo total</div>
@@ -95,12 +96,12 @@ const Dashboard = {
           </div>
           
           <div class="stat-card">
-            <div class="stat-card-icon purple">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+            <div class="stat-card-icon green">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-label">Ahorro del mes</div>
-              <div class="stat-card-value">${Formato.formatearMoneda(ahorro, moneda)}</div>
+              <div class="stat-card-label">Ingresos del mes</div>
+              <div class="stat-card-value text-success">${Formato.formatearMoneda(ingresos, moneda)}</div>
             </div>
           </div>
         </div>
@@ -111,24 +112,47 @@ const Dashboard = {
         
         <div class="stats-right">
           <div class="stat-card">
-            <div class="stat-card-icon green">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+            <div class="stat-card-icon red">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-label">Egresos</div>
-              <div class="stat-card-value">${Formato.formatearMoneda(egresos, moneda)}</div>
+              <div class="stat-card-label">Egresos en efectivo</div>
+              <div class="stat-card-value text-danger">${Formato.formatearMoneda(egresosCash, moneda)}</div>
+              <div style="font-size:0.6875rem;color:var(--text-tertiary);margin-top:2px;">Salieron de tus cuentas</div>
             </div>
           </div>
           
           <div class="stat-card">
-            <div class="stat-card-icon blue">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <div class="stat-card-icon purple">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-label">Ingresos</div>
-              <div class="stat-card-value">${Formato.formatearMoneda(ingresos, moneda)}</div>
+              <div class="stat-card-label">Egresos con tarjeta</div>
+              <div class="stat-card-value text-warning">${Formato.formatearMoneda(egresosTarjeta, moneda)}</div>
+              <div style="font-size:0.6875rem;color:var(--text-tertiary);margin-top:2px;">Pagarás en próximo ciclo</div>
             </div>
           </div>
+        </div>
+      </div>
+      
+      <!-- 5to stat: Transferencias (fila separada, ancho completo) -->
+      <div class="stat-transferencias">
+        <div class="stat-card transf-stat-card">
+          <div class="stat-card-icon" style="background: linear-gradient(135deg, #14F0CD, #06B6D4); color: #0A0E1A;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          </div>
+          <div class="stat-card-info">
+            <div class="stat-card-label">Transferencias del mes</div>
+            <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+              <div class="stat-card-value">${Formato.formatearMoneda(transferencias.total, moneda)}</div>
+              <div style="font-size:0.75rem;color:var(--text-tertiary);">
+                ${transferencias.cantidad} ${transferencias.cantidad === 1 ? 'movimiento' : 'movimientos'} entre tus cuentas
+              </div>
+            </div>
+          </div>
+          <button class="btn-secondary" style="font-size:0.75rem;padding:6px 12px;" onclick="App.navegarA('transferencias')">
+            Ver detalle →
+          </button>
         </div>
       </div>
     `;
@@ -613,14 +637,16 @@ const Dashboard = {
   
   /* ============ ASIDE: FAVORITES (cuentas) ============ */
   renderFavorites() {
-    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito').slice(0, 4);
+    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito');
+    const tarjetas = API.obtenerTarjetas();
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
     
-    if (cuentas.length === 0) {
+    if (cuentas.length === 0 && tarjetas.length === 0) {
       return `
         <div class="aside-card">
           <div class="aside-card-header">
             <div class="aside-card-titles">
-              <div class="aside-card-title">Mis cuentas</div>
+              <div class="aside-card-title">Mis cuentas y tarjetas</div>
             </div>
           </div>
           <div style="text-align:center;color:var(--text-tertiary);font-size:0.8125rem;padding:var(--space-md);">
@@ -630,29 +656,91 @@ const Dashboard = {
       `;
     }
     
-    const colores = ['#8B5CF6', '#10B981', '#F59E0B', '#06B6D4'];
+    // Calcular movimiento del mes por cada cuenta/tarjeta
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const finMes = ahora.toISOString().split('T')[0];
     
-    const cards = cuentas.slice(0, 2).map((c, i) => {
+    // Renderizar cuentas
+    const cardsCuentas = cuentas.map(c => {
+      const color = c.color || 'blue';
+      const colorHex = ColorPicker.obtenerHex(color);
       const inicial = c.nombre.charAt(0).toUpperCase();
-      const tipoLabel = c.tipo === 'efectivo' ? 'EF' : c.tipo === 'billetera' ? 'BL' : 'BANK';
-      const cambio = (Math.random() * 4 - 1).toFixed(2); // simulado
+      
+      // Calcular movimientos del mes
+      const trans = API.obtenerTransacciones({ cuentaId: c.id });
+      const transMes = trans.filter(t => t.fecha >= inicioMes && t.fecha <= finMes && !t.esTransferencia);
+      const ingresoMes = transMes.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0);
+      const egresoMes = transMes.filter(t => t.tipo === 'egreso').reduce((s, t) => s + t.monto, 0);
+      const cambio = ingresoMes - egresoMes;
+      const cambioPct = c.saldo > 0 ? (cambio / c.saldo) * 100 : 0;
+      
+      const tipoLabel = c.tipo === 'efectivo' ? 'EFECTIVO' : c.tipo === 'billetera' ? 'BILLETERA' : 'BANCO';
       
       return `
-        <div class="favorite-card">
+        <div class="favorite-card" style="border-left: 3px solid ${colorHex};">
           <div class="favorite-header">
-            <div class="favorite-icon" style="background: ${colores[i % colores.length]};">${inicial}</div>
-            <div>
-              <div class="favorite-name">${c.nombre.length > 10 ? c.nombre.substring(0, 10) + '...' : c.nombre}</div>
-              <div class="favorite-symbol">${tipoLabel}</div>
+            <div class="favorite-icon" style="background: ${colorHex};">${inicial}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="favorite-name" title="${c.nombre}">${c.nombre.length > 14 ? c.nombre.substring(0, 14) + '...' : c.nombre}</div>
+              <div class="favorite-symbol">${tipoLabel} · ${c.moneda}</div>
             </div>
           </div>
           <div class="favorite-sparkline">
-            <canvas id="sparkFav${c.id}"></canvas>
+            <canvas id="sparkFav_cuenta_${c.id}" data-color="${colorHex}"></canvas>
           </div>
           <div class="favorite-stats">
             <span class="favorite-amount">${Formato.formatearMoneda(c.saldo, c.moneda)}</span>
             <span class="favorite-change ${cambio >= 0 ? 'positive' : 'negative'}">
-              ${cambio >= 0 ? '+' : ''}${cambio}%
+              ${cambio >= 0 ? '+' : ''}${Formato.formatearMoneda(Math.abs(cambio), c.moneda)}
+            </span>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    // Renderizar tarjetas de crédito
+    const cardsTarjetas = tarjetas.map(t => {
+      const colorId = t.colorTema || 'purple';
+      const colorHex = ColorPicker.obtenerHex(colorId);
+      const inicial = '💳';
+      
+      // Calcular consumos del mes con esta tarjeta
+      const trans = API.obtenerTransacciones({});
+      const transTarjetaMes = trans.filter(tr => 
+        tr.tarjetaId === t.id && 
+        tr.fecha >= inicioMes && 
+        tr.fecha <= finMes
+      );
+      const consumoMes = transTarjetaMes.reduce((s, tr) => s + tr.monto, 0);
+      
+      const pctUsado = t.lineaCredito > 0 ? (t.usado / t.lineaCredito) * 100 : 0;
+      
+      return `
+        <div class="favorite-card" style="border-left: 3px solid ${colorHex};">
+          <div class="favorite-header">
+            <div class="favorite-icon" style="background: ${colorHex};font-size:14px;">💳</div>
+            <div style="flex:1;min-width:0;">
+              <div class="favorite-name" title="${t.nombre}">${t.nombre.length > 14 ? t.nombre.substring(0, 14) + '...' : t.nombre}</div>
+              <div class="favorite-symbol">TARJETA · ${t.moneda}</div>
+            </div>
+          </div>
+          
+          <!-- Barra de uso -->
+          <div style="margin: 6px 0;">
+            <div style="height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${Math.min(pctUsado, 100)}%;background:${colorHex};border-radius:3px;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.625rem;color:var(--text-tertiary);">
+              <span>${pctUsado.toFixed(0)}% usado</span>
+              <span>Disp: ${Formato.formatearMoneda(t.lineaCredito - t.usado, t.moneda).replace('.00', '')}</span>
+            </div>
+          </div>
+          
+          <div class="favorite-stats">
+            <span class="favorite-amount">${Formato.formatearMoneda(t.usado, t.moneda)}</span>
+            <span class="favorite-change ${consumoMes > 0 ? 'negative' : 'positive'}">
+              ${consumoMes > 0 ? '+' : ''}${Formato.formatearMoneda(consumoMes, t.moneda)}
             </span>
           </div>
         </div>
@@ -664,36 +752,73 @@ const Dashboard = {
         <div class="aside-card-header">
           <div class="aside-card-titles">
             <div class="aside-card-title">Mis cuentas</div>
+            <div class="aside-card-subtitle">${cuentas.length} ${cuentas.length === 1 ? 'cuenta' : 'cuentas'} activas</div>
           </div>
-          <a class="aside-card-subtitle" style="color:var(--accent-primary);cursor:pointer;">Ver todas</a>
         </div>
         <div class="favorites-grid">
-          ${cards}
+          ${cardsCuentas}
         </div>
       </div>
+      
+      ${tarjetas.length > 0 ? `
+        <div class="aside-card" style="margin-top: var(--space-md);">
+          <div class="aside-card-header">
+            <div class="aside-card-titles">
+              <div class="aside-card-title">Mis tarjetas</div>
+              <div class="aside-card-subtitle">${tarjetas.length} ${tarjetas.length === 1 ? 'tarjeta' : 'tarjetas'} de crédito</div>
+            </div>
+          </div>
+          <div class="favorites-grid">
+            ${cardsTarjetas}
+          </div>
+        </div>
+      ` : ''}
     `;
   },
   
   renderSparklinesFavorites() {
-    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito').slice(0, 2);
-    cuentas.forEach((c, i) => {
-      const canvas = document.getElementById(`sparkFav${c.id}`);
+    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito');
+    const ahora = new Date();
+    
+    cuentas.forEach(c => {
+      const canvas = document.getElementById(`sparkFav_cuenta_${c.id}`);
       if (!canvas) return;
       
-      // Generar puntos aleatorios para el sparkline (simulado)
-      const points = Array.from({ length: 12 }, () => Math.random() * 100 + 50);
-      const trend = Math.random() > 0.3 ? '#14F0CD' : '#EF4444';
+      const color = canvas.dataset.color || '#14F0CD';
       
-      Graficos.destruir(`sparkFav${c.id}`);
+      // Generar saldo histórico real de los últimos 14 días
+      const saldoActual = c.saldo;
+      const trans = API.obtenerTransacciones({ cuentaId: c.id });
+      
+      // Reconstruir saldos día a día (yendo hacia atrás desde saldo actual)
+      const dias = 14;
+      const puntos = new Array(dias).fill(saldoActual);
+      
+      for (let i = 0; i < dias; i++) {
+        const fecha = new Date(ahora);
+        fecha.setDate(fecha.getDate() - i);
+        const fechaStr = fecha.toISOString().split('T')[0];
+        
+        // Sumar/restar las transacciones de ese día y posteriores para tener el saldo de ese día
+        const transHastaHoy = trans.filter(t => t.fecha > fechaStr);
+        let saldoEnEseDia = saldoActual;
+        transHastaHoy.forEach(t => {
+          if (t.tipo === 'ingreso') saldoEnEseDia -= t.monto;
+          else if (t.tipo === 'egreso') saldoEnEseDia += t.monto;
+        });
+        puntos[dias - 1 - i] = saldoEnEseDia;
+      }
+      
+      Graficos.destruir(`sparkFav_cuenta_${c.id}`);
       const ctx = canvas.getContext('2d');
       
-      Graficos.instancias[`sparkFav${c.id}`] = new Chart(ctx, {
+      Graficos.instancias[`sparkFav_cuenta_${c.id}`] = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: points.map((_, i) => i),
+          labels: puntos.map((_, i) => i),
           datasets: [{
-            data: points,
-            borderColor: trend,
+            data: puntos,
+            borderColor: color,
             backgroundColor: 'transparent',
             borderWidth: 1.5,
             tension: 0.4,

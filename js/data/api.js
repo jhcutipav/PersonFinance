@@ -514,6 +514,52 @@ const API = {
     return Formato.sumarEnMoneda(trans, monedaDestino);
   },
   
+  /**
+   * Egresos del mes que SÍ salieron de cuentas reales (cash, débito).
+   * NO incluye compras con tarjeta de crédito.
+   */
+  calcularEgresosCashMes(monedaDestino = 'PEN') {
+    const ahora = new Date();
+    const trans = this.obtenerTransacciones({
+      tipo: 'egreso',
+      mes: ahora.getMonth() + 1,
+      anio: ahora.getFullYear(),
+    }).filter(t => !t.tarjetaId); // Sin tarjeta de crédito
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  /**
+   * Egresos del mes con tarjeta de crédito (compras que pagarás en el futuro).
+   */
+  calcularEgresosTarjetaMes(monedaDestino = 'PEN') {
+    const ahora = new Date();
+    const trans = this.obtenerTransacciones({
+      tipo: 'egreso',
+      mes: ahora.getMonth() + 1,
+      anio: ahora.getFullYear(),
+    }).filter(t => t.tarjetaId); // Solo con tarjeta de crédito
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  /**
+   * Total de dinero movido en transferencias durante el mes actual
+   */
+  calcularTransferenciasMes(monedaDestino = 'PEN') {
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).toISOString().split('T')[0];
+    
+    const transferencias = this.obtenerTransferencias();
+    const delMes = transferencias.filter(t => t.fecha >= inicioMes && t.fecha <= finMes);
+    
+    let total = 0;
+    delMes.forEach(t => {
+      total += Formato.convertir(t.monto, t.monedaOrigen, monedaDestino);
+    });
+    
+    return { total, cantidad: delMes.length };
+  },
+  
   calcularAhorroMes(monedaDestino = 'PEN') {
     return this.calcularIngresosMes(monedaDestino) - this.calcularEgresosMes(monedaDestino);
   },
@@ -949,6 +995,47 @@ const API = {
     if (deuda.cuotasPagadas >= cronograma.length) return 0;
     
     return cronograma[deuda.cuotasPagadas].saldoInicial;
+  },
+  
+  /**
+   * Obtiene el cronograma de una deuda aplicando overrides personalizados
+   */
+  obtenerCronogramaConOverrides(deuda) {
+    const cronograma = Prestamos.generarCronograma(
+      deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema, deuda.fechaInicio
+    );
+    
+    const overrides = deuda.cuotasOverrides || {};
+    
+    return cronograma.map(c => {
+      if (overrides[c.numero] !== undefined) {
+        return { ...c, cuota: overrides[c.numero], esOverride: true };
+      }
+      return c;
+    });
+  },
+  
+  /**
+   * Guarda un override de cuota individual (cambio manual de monto)
+   */
+  guardarOverrideCuota(deudaId, numeroCuota, nuevoMonto) {
+    const deudas = Storage.cargar('deudas') || [];
+    const idx = deudas.findIndex(d => d.id === deudaId);
+    if (idx === -1) throw new Error('Deuda no encontrada');
+    
+    if (!deudas[idx].cuotasOverrides) {
+      deudas[idx].cuotasOverrides = {};
+    }
+    
+    if (nuevoMonto === null || nuevoMonto === undefined) {
+      // Eliminar el override
+      delete deudas[idx].cuotasOverrides[numeroCuota];
+    } else {
+      deudas[idx].cuotasOverrides[numeroCuota] = parseFloat(nuevoMonto);
+    }
+    
+    Storage.guardar('deudas', deudas);
+    return deudas[idx];
   },
   
   /* ========== METAS DE AHORRO ========== */
