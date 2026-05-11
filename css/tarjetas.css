@@ -396,3 +396,42 @@
     text-align: left;
   }
 }
+
+/* ============================================
+   v0.10.1 — Layout 2 columnas en página tarjetas
+   ============================================ */
+.tarjetas-page-top {
+  display: grid;
+  grid-template-columns: 0.5fr 1fr 0.5fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  align-items: start;
+}
+
+.tarjetas-slider-col {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+
+.tarjetas-resumen-col {
+  position: sticky;
+  top: var(--space-md);
+}
+
+@media (max-width: 1280px) {
+  .tarjetas-page-top {
+    grid-template-columns: 1fr 320px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .tarjetas-page-top {
+    grid-template-columns: 1fr;
+  }
+  
+  .tarjetas-resumen-col {
+    position: static;
+  }
+}

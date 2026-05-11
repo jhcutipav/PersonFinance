@@ -9,8 +9,20 @@ const Tarjetas = {
   cicloVisualizando: 'actual', // actual | facturado | historico
   monedaVista: 'PEN',
   
+  refrescar() {
+    const container = document.getElementById('pageContent');
+    if (container) this.render(container, this.monedaVista);
+  },
+  
+  /* ============================================
+     PÁGINA TARJETAS
+     v0.10.1 — Cambios:
+     - Layout 2 columnas: slider izquierda + resumen derecha
+     - Resumen con barra de uso, gráfico de evolución
+     ============================================ */
   render(container, monedaVista = 'PEN') {
     this.monedaVista = monedaVista;
+    Graficos.destruirTodos();
     
     const tarjetas = API.obtenerTarjetas();
     
@@ -27,12 +39,309 @@ const Tarjetas = {
     
     container.innerHTML = `
       <div class="tarjetas-page">
-        ${this.renderSelector(tarjetas)}
+        <!-- Layout 2 columnas: slider + resumen -->
+        <div class="tarjetas-page-top">
+          <div class="tarjetas-resumen-col" id="tarjetasResumenCol">
+            ${this.renderResumenTarjetaPaginaMesAnterior()}
+          </div>
+          <div class="tarjetas-slider-col">
+            ${this.renderSelector(tarjetas)}
+          </div>
+          <div class="tarjetas-resumen-col" id="tarjetasResumenCol">
+            ${this.renderResumenTarjetaPagina()}
+          </div>
+        </div>
+        
+        <!-- Tabs y movimientos abajo (ancho completo) -->
         ${this.renderTarjetaDetalle()}
       </div>
     `;
     
     this.configurarEventos();
+    
+    setTimeout(() => {
+      this.renderChartUsoTarjeta();
+    }, 50);
+  },
+  
+  /**
+   * v0.10.1 — Renderiza resumen de la tarjeta a la derecha del slider
+   */
+  renderResumenTarjetaPagina() {
+    const tarjeta = API.obtenerTarjetaPorId(this.tarjetaSeleccionadaId);
+    if (!tarjeta) return '';
+    
+    const colorHex = ColorPicker.obtenerHex(tarjeta.colorTema || 'purple');
+    const colorRgb = this.hexToRgb(colorHex);
+    const disponible = tarjeta.lineaCredito - tarjeta.saldoUsado;
+    const pctUsado = tarjeta.lineaCredito > 0 ? (tarjeta.saldoUsado / tarjeta.lineaCredito) * 100 : 0;
+    
+    // Consumo del mes
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const finMes = ahora.toISOString().split('T')[0];
+    const trans = API.obtenerTransacciones({ incluirTransferencias: false })
+      .filter(t => t.tarjetaId === tarjeta.id && t.fecha >= inicioMes && t.fecha <= finMes);
+    const consumoMes = trans.reduce((s, t) => s + t.monto, 0);
+    
+    // Próximo pago
+    const hoy = new Date();
+    const proximoPago = new Date(hoy.getFullYear(), hoy.getMonth(), tarjeta.diaPago);
+    if (proximoPago < hoy) proximoPago.setMonth(proximoPago.getMonth() + 1);
+    const diasParaPago = Math.ceil((proximoPago - hoy) / (1000 * 60 * 60 * 24));
+    
+    return `
+      <div class="resumen-side-card" style="border-left:4px solid ${colorHex};">
+        <div class="resumen-side-header">
+          <div class="resumen-side-titles">
+            <div class="resumen-side-title">${tarjeta.nombre}</div>
+            <div class="resumen-side-subtitle">${tarjeta.banco} · ${tarjeta.marca} · •••• ${tarjeta.ultimosDigitos}</div>
+          </div>
+          <div class="resumen-side-badge" style="background:rgba(${colorRgb},0.15);color:${colorHex};border:1px solid rgba(${colorRgb},0.3);">
+            ${tarjeta.moneda}
+          </div>
+        </div>
+        
+        ${tarjeta.descripcion ? `
+          <div class="resumen-side-desc">📝 Uso de la tarjeta del mes actual</div>
+        ` : ''}
+        
+        <!-- Acciones -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-primary" id="btnPagarTarjeta" style="flex:1;justify-content:center;font-size:0.8125rem;">💵 Adelantar pago</button>
+          <button class="btn-secondary" id="btnEditarTarjeta" style="font-size:0.8125rem;">⚙️</button>
+          <button class="btn-secondary" id="btnNuevoConsumo" style="font-size:0.8125rem;">+</button>
+        </div>
+        
+        <!-- Stats principales -->
+        <div class="resumen-side-stats">
+          <div class="resumen-side-stat">
+            <div class="resumen-side-stat-label">Línea</div>
+            <div class="resumen-side-stat-value">${Formato.formatearMoneda(tarjeta.lineaCredito, tarjeta.moneda)}</div>
+          </div>
+          <div class="resumen-side-stat">
+            <div class="resumen-side-stat-label">Disponible</div>
+            <div class="resumen-side-stat-value text-success">${Formato.formatearMoneda(disponible, tarjeta.moneda)}</div>
+          </div>
+          <div class="resumen-side-stat">
+            <div class="resumen-side-stat-label">Usado</div>
+            <div class="resumen-side-stat-value text-danger">${Formato.formatearMoneda(tarjeta.saldoUsado, tarjeta.moneda)}</div>
+          </div>
+        </div>
+        
+        <!-- Barra de uso -->
+        <div class="resumen-side-progress">
+          <div class="resumen-side-progress-label">
+            <span>Uso de línea de crédito</span>
+            <strong>${pctUsado.toFixed(1)}%</strong>
+          </div>
+          <div class="resumen-side-progress-bar">
+            <div class="resumen-side-progress-fill" 
+                 style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${colorHex},${colorHex}cc);"></div>
+          </div>
+        </div>
+        
+        <!-- Extra: consumo y próximo pago -->
+        <div class="resumen-side-extra">
+          <div class="resumen-side-extra-item">
+            <div class="resumen-side-stat-label">Consumo del mes</div>
+            <div class="resumen-side-stat-value-md">${Formato.formatearMoneda(consumoMes, tarjeta.moneda)}</div>
+            <div class="resumen-side-extra-meta">${trans.length} ${trans.length === 1 ? 'compra' : 'compras'}</div>
+          </div>
+          <div class="resumen-side-extra-item">
+            <div class="resumen-side-stat-label">Próximo pago</div>
+            <div class="resumen-side-stat-value-md">${diasParaPago} ${diasParaPago === 1 ? 'día' : 'días'}</div>
+            <div class="resumen-side-extra-meta">${Fechas.formatoCorto(proximoPago.toISOString())}</div>
+          </div>
+        </div>
+        
+        <!-- Mini gráfico de evolución del uso -->
+        <div class="resumen-side-chart">
+          <div class="resumen-side-chart-label">Evolución del uso (30 días)</div>
+          <canvas id="chartUsoTarjeta"></canvas>
+        </div>
+      </div>
+    `;
+  },
+
+  /**
+   * Render para el mes anterior de la tarjeta
+   */
+  renderResumenTarjetaPaginaMesAnterior() {
+    const tarjeta = API.obtenerTarjetaPorId(this.tarjetaSeleccionadaId);
+    if (!tarjeta) return '';
+    
+    const colorHex = ColorPicker.obtenerHex(tarjeta.colorTema || 'purple');
+    const colorRgb = this.hexToRgb(colorHex);
+    const disponible = tarjeta.lineaCredito - tarjeta.saldoUsado;
+    const pctUsado = tarjeta.lineaCredito > 0 ? (tarjeta.saldoUsado / tarjeta.lineaCredito) * 100 : 0;
+    
+    // Consumo del mes
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const finMes = ahora.toISOString().split('T')[0];
+    const trans = API.obtenerTransacciones({ incluirTransferencias: false })
+      .filter(t => t.tarjetaId === tarjeta.id && t.fecha >= inicioMes && t.fecha <= finMes);
+    const consumoMes = trans.reduce((s, t) => s + t.monto, 0);
+    
+    // Próximo pago
+    const hoy = new Date();
+    const proximoPago = new Date(hoy.getFullYear(), hoy.getMonth(), tarjeta.diaPago);
+    if (proximoPago < hoy) proximoPago.setMonth(proximoPago.getMonth() + 1);
+    const diasParaPago = Math.ceil((proximoPago - hoy) / (1000 * 60 * 60 * 24));
+    
+    return `
+      <div class="resumen-side-card" style="border-left:4px solid ${colorHex};">
+        <div class="resumen-side-header">
+          <div class="resumen-side-titles">
+            <div class="resumen-side-title">${tarjeta.nombre}</div>
+            <div class="resumen-side-subtitle">${tarjeta.banco} · ${tarjeta.marca} · •••• ${tarjeta.ultimosDigitos}</div>
+          </div>
+          <div class="resumen-side-badge" style="background:rgba(${colorRgb},0.15);color:${colorHex};border:1px solid rgba(${colorRgb},0.3);">
+            ${tarjeta.moneda}
+          </div>
+        </div>
+        
+        ${tarjeta.descripcion ? `
+          <div class="resumen-side-desc">📝 Uso de la tarjeta del mes anterior</div>
+        ` : ''}
+        
+        <!-- Acciones -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-primary" id="btnPagarTarjeta" style="flex:1;justify-content:center;font-size:0.8125rem;">💵 Pagar</button>
+          <button class="btn-secondary" id="btnEditarTarjeta" style="font-size:0.8125rem;">⚙️</button>
+          <button class="btn-secondary" id="btnNuevoConsumo" style="font-size:0.8125rem;">+</button>
+        </div>
+        
+        <!-- Stats principales -->
+        <div class="resumen-side-stats">
+          <div class="resumen-side-stat">
+            <div class="resumen-side-stat-label">Línea</div>
+            <div class="resumen-side-stat-value">${Formato.formatearMoneda(tarjeta.lineaCredito, tarjeta.moneda)}</div>
+          </div>
+          <div class="resumen-side-stat">
+            <div class="resumen-side-stat-label">Disponible</div>
+            <div class="resumen-side-stat-value text-success">${Formato.formatearMoneda(disponible, tarjeta.moneda)}</div>
+          </div>
+          <div class="resumen-side-stat">
+            <div class="resumen-side-stat-label">Usado</div>
+            <div class="resumen-side-stat-value text-danger">${Formato.formatearMoneda(tarjeta.saldoUsado, tarjeta.moneda)}</div>
+          </div>
+        </div>
+        
+        <!-- Barra de uso -->
+        <div class="resumen-side-progress">
+          <div class="resumen-side-progress-label">
+            <span>Uso de línea de crédito</span>
+            <strong>${pctUsado.toFixed(1)}%</strong>
+          </div>
+          <div class="resumen-side-progress-bar">
+            <div class="resumen-side-progress-fill" 
+                 style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${colorHex},${colorHex}cc);"></div>
+          </div>
+        </div>
+        
+        <!-- Extra: consumo y próximo pago -->
+        <div class="resumen-side-extra">
+          <div class="resumen-side-extra-item">
+            <div class="resumen-side-stat-label">Consumo del mes</div>
+            <div class="resumen-side-stat-value-md">${Formato.formatearMoneda(consumoMes, tarjeta.moneda)}</div>
+            <div class="resumen-side-extra-meta">${trans.length} ${trans.length === 1 ? 'compra' : 'compras'}</div>
+          </div>
+          <div class="resumen-side-extra-item">
+            <div class="resumen-side-stat-label">Próximo pago</div>
+            <div class="resumen-side-stat-value-md">${diasParaPago} ${diasParaPago === 1 ? 'día' : 'días'}</div>
+            <div class="resumen-side-extra-meta">${Fechas.formatoCorto(proximoPago.toISOString())}</div>
+          </div>
+        </div>
+        
+        <!-- Mini gráfico de evolución del uso -->
+        <div class="resumen-side-chart">
+          <div class="resumen-side-chart-label">Evolución del uso (30 días)</div>
+          <canvas id="chartUsoTarjeta"></canvas>
+        </div>
+      </div>
+    `;
+  },
+  
+  /**
+   * v0.10.1 — Gráfico de evolución de uso de tarjeta
+   */
+  renderChartUsoTarjeta() {
+    const canvas = document.getElementById('chartUsoTarjeta');
+    if (!canvas) return;
+    
+    const tarjeta = API.obtenerTarjetaPorId(this.tarjetaSeleccionadaId);
+    if (!tarjeta) return;
+    
+    const colorHex = ColorPicker.obtenerHex(tarjeta.colorTema || 'purple');
+    const rgb = this.hexToRgb(colorHex);
+    
+    const trans = API.obtenerTransacciones({ incluirTransferencias: false })
+      .filter(t => t.tarjetaId === tarjeta.id);
+    
+    const dias = 30;
+    const datos = new Array(dias).fill(0);
+    const ahora = new Date();
+    
+    for (let i = 0; i < dias; i++) {
+      const fecha = new Date(ahora);
+      fecha.setDate(fecha.getDate() - (dias - 1 - i));
+      const fechaStr = fecha.toISOString().split('T')[0];
+      const transHasta = trans.filter(t => t.fecha <= fechaStr);
+      datos[i] = transHasta.reduce((s, t) => s + t.monto, 0);
+    }
+    
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 100);
+    gradient.addColorStop(0, `rgba(${rgb}, 0.4)`);
+    gradient.addColorStop(1, `rgba(${rgb}, 0)`);
+    
+    Graficos.destruir('chartUsoTarjeta');
+    Graficos.instancias['chartUsoTarjeta'] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: datos.map((_, i) => i + 1),
+        datasets: [{
+          data: datos,
+          borderColor: colorHex,
+          backgroundColor: gradient,
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 0,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 41, 0.95)',
+            padding: 8,
+            cornerRadius: 6,
+            callbacks: {
+              title: (items) => `Día ${items[0].label}`,
+              label: (item) => `Usado: ${Formato.formatearMoneda(item.parsed.y, tarjeta.moneda)}`,
+            },
+          },
+        },
+        scales: {
+          x: { display: false },
+          y: { display: false },
+        },
+      },
+    });
+  },
+  
+  /**
+   * Helper para convertir hex a "r, g, b"
+   */
+  hexToRgb(hex) {
+    if (!hex || !hex.startsWith('#')) return '124, 58, 237';
+    const num = parseInt(hex.slice(1), 16);
+    return `${(num >> 16) & 0xff}, ${(num >> 8) & 0xff}, ${num & 0xff}`;
   },
   
   renderEmptyState() {
@@ -109,55 +418,20 @@ const Tarjetas = {
   
   /**
    * Detalle de la tarjeta seleccionada
+   * v0.10.1 — Las acciones, stats y notas ahora están en el resumen lateral.
+   * Aquí solo quedan los tabs de ciclos y movimientos.
    */
   renderTarjetaDetalle() {
     const tarjeta = API.obtenerTarjetaPorId(this.tarjetaSeleccionadaId);
     if (!tarjeta) return '';
     
-    const usuario = API.obtenerUsuario();
     const transacciones = API.obtenerTransaccionesTarjeta(tarjeta.id);
     const ciclos = TarjetaUtils.calcularCiclos(tarjeta.diaCorte, tarjeta.diaPago);
     
-    // Calcular montos
     const montoFacturado = TarjetaUtils.calcularMontoFacturado(tarjeta, transacciones);
     const montoActual = TarjetaUtils.calcularMontoCicloActual(tarjeta, transacciones);
-    const disponible = tarjeta.lineaCredito - tarjeta.saldoUsado;
-    const porcentajeUsado = (tarjeta.saldoUsado / tarjeta.lineaCredito) * 100;
     
     return `
-      <!-- Acciones (la tarjeta visual está en el slider de arriba) -->
-      <div style="display:flex;gap:var(--space-sm);justify-content:center;flex-wrap:wrap;margin-bottom:var(--space-md);">
-        <button class="btn-primary" id="btnPagarTarjeta">💵 Pagar tarjeta</button>
-        <button class="btn-secondary" id="btnEditarTarjeta">⚙️ Configurar</button>
-        <button class="btn-secondary" id="btnNuevoConsumo">+ Nuevo consumo</button>
-      </div>
-      
-      ${tarjeta.descripcion ? `
-        <div class="glass-card" style="padding:12px 16px;margin-bottom:var(--space-md);background:linear-gradient(135deg, rgba(20, 240, 205, 0.05), transparent);border-color:rgba(20, 240, 205, 0.2);">
-          <div style="font-size:0.6875rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">📝 Notas</div>
-          <div style="font-size:0.875rem;color:var(--text-secondary);line-height:1.5;">${tarjeta.descripcion}</div>
-        </div>
-      ` : ''}
-      
-      <!-- Stats -->
-      <div class="tarjeta-stats-grid">
-        <div class="glass-card tarjeta-stat">
-          <div class="tarjeta-stat-label">Línea total</div>
-          <div class="tarjeta-stat-value">${Formato.formatearMoneda(tarjeta.lineaCredito, tarjeta.moneda)}</div>
-          <div class="tarjeta-stat-secondary">${Math.round(porcentajeUsado)}% usado</div>
-        </div>
-        <div class="glass-card tarjeta-stat">
-          <div class="tarjeta-stat-label">Disponible</div>
-          <div class="tarjeta-stat-value success">${Formato.formatearMoneda(disponible, tarjeta.moneda)}</div>
-          <div class="tarjeta-stat-secondary">Para gastar</div>
-        </div>
-        <div class="glass-card tarjeta-stat">
-          <div class="tarjeta-stat-label">Total usado</div>
-          <div class="tarjeta-stat-value danger">${Formato.formatearMoneda(tarjeta.saldoUsado, tarjeta.moneda)}</div>
-          <div class="tarjeta-stat-secondary">Pendiente de pago</div>
-        </div>
-      </div>
-      
       <!-- Tabs de ciclos -->
       <div class="glass-card">
         ${this.renderTabs(montoFacturado, montoActual, transacciones, ciclos)}

@@ -9,49 +9,63 @@ const MockData = {
   
   usuario: {
     id: 1,
-    nombre: 'Daniel',
-    email: 'daniel@ejemplo.com',
+    nombre: 'Neyo Test',
+    email: 'neyo@ejemplo.com',
     monedaPrincipal: 'PEN',
   },
   
   cuentas: [
-    { id: 1, nombre: 'Interbank / Plin', tipo: 'efectivo', moneda: 'PEN', saldo: 0.00, activo: true },
-    { id: 2, nombre: 'BBVA / PLIN', tipo: 'debito', moneda: 'PEN', saldo: 0.00, activo: true },
-    { id: 3, nombre: 'BCP / YAPE', tipo: 'billetera', moneda: 'PEN', saldo: 0.00, activo: true },
-    { id: 4, nombre: 'INTERBANK TC', tipo: 'credito', moneda: 'PEN', saldo: 0.00, activo: true },
-    { id: 5, nombre: 'BBVA TC', tipo: 'credito', moneda: 'PEN', saldo:0, activo: true },
-    { id: 6, nombre: 'BCP TC', tipo: 'credito', moneda: 'PEN', saldo: 0, activo: true },
-    { id: 7, nombre: 'OH', tipo: 'credito', moneda: 'PEN', saldo: 0, activo: true },
-    { id: 8, nombre: 'CAJA LOS ANDES', tipo: 'debito', moneda: 'PEN', saldo: 0.00, activo: true },
-    { id: 9, nombre: 'PREX PE', tipo: 'debito', moneda: 'PEN', saldo: 0.00, activo: true },
-    { id: 10, nombre: 'INTERBANK $', tipo: 'debito', moneda: 'USB', saldo: 0.00, activo: true },
-    { id: 11, nombre: 'BCP $', tipo: 'debito', moneda: 'USD', saldo: 0.00, activo: true },
+    { id: 1, nombre: 'Efectivo',          tipo: 'efectivo',  moneda: 'PEN', saldo: 0.0,      activo: true, color: 'green',   icono: '💵', bancarizado: '0' },
+    { id: 2, nombre: 'Interbank S/',      tipo: 'debito',    moneda: 'PEN', saldo: 2000,    activo: true, color: 'green',   icono: '🏦', bancarizado: '1' },
+    { id: 3, nombre: 'Plin - INTERBANK',  tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'green',   icono: '📱', bancarizado: '1' },
+    { id: 4, nombre: 'BBVA S/',           tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'green',   icono: '🏦', bancarizado: '1' },
+    { id: 5, nombre: 'Plin - BBVA',       tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'skylue',  icono: '🏦', bancarizado: '1' },
+    { id: 6, nombre: 'BCP S/',            tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'bue',     icono: '🏦', bancarizado: '1' },
+    { id: 7, nombre: 'YAPE BCP',          tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'blue',    icono: '🏦', bancarizado: '1' },
+    { id: 8, nombre: 'Prex',              tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'amber',   icono: '🏦', bancarizado: '0' },
+    { id: 9, nombre: 'Caja los Andes',    tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'amber',   icono: '🏦', bancarizado: '1' },
+    { id: 10, nombre: 'Interbank TC',     tipo: 'credito',   moneda: 'PEN', saldo: 0.0,      activo: true, color: 'green',   icono: '🏦', bancarizado: '1' },
+    { id: 11, nombre: 'BBVA TC',          tipo: 'credito',   moneda: 'PEN', saldo: 0.0,      activo: true, color: 'blue',    icono: '🏦', bancarizado: '1' },
+    { id: 12, nombre: 'BCP TC',           tipo: 'credito',   moneda: 'PEN', saldo: 0.0,      activo: true, color: 'blue',    icono: '🏦', bancarizado: '1' },
+    { id: 13, nombre: 'OH / SIP TC',      tipo: 'credito',   moneda: 'PEN', saldo: 0.0,      activo: true, color: 'blue',    icono: '🏦', bancarizado: '1' },
   ],
   
   tarjetas: [
     {
-      id: 1, cuentaId: 4, nombre: 'INTERBANK TC', banco: 'INTERBANK',
-      titular: 'NEYO CARD 1 IBK', ultimosDigitos: '4521', fechaExpiracion: '08/28',
-      marca: 'VISA', moneda: 'PEN', lineaCredito: 1400, saldoUsado: 0,
-      diaCorte: 6, diaPago: 2, tasaTEA: 0.85, colorTema: 'purple',
+      id: 1, cuentaId: 10, nombre: 'Interbank TC', banco: 'INTERBANK',
+      titular: 'NEYO 1', ultimosDigitos: '4521', fechaExpiracion: '08/28',
+      marca: 'VISA', moneda: 'PEN', lineaCredito: 1400, saldoUsado: 120,
+      diaCorte: 6, diaPago: 2, tasaTEA: 0.85, colorTema: 'green',
+      descripcion: 'Tarjeta de credito IBK',
     },
     {
-      id: 2, cuentaId: 5, nombre: 'BBVA TC', banco: 'BBVA',
-      titular: 'NEYO CARD 2 BBVA', ultimosDigitos: '8932', fechaExpiracion: '03/27',
-      marca: 'VISA', moneda: 'PEN', lineaCredito: 2900, saldoUsado: 0,
-      diaCorte: 4, diaPago: 10, tasaTEA: 0.45, colorTema: 'cyan',
+      id: 2, cuentaId: 11, nombre: 'BBVA TC', banco: 'INTERBANK',
+      titular: 'Neyo 2', ultimosDigitos: '8932', fechaExpiracion: '03/27',
+      marca: 'MASTERCARD', moneda: 'PEN', lineaCredito: 2900, saldoUsado: 100,
+      diaCorte: 10, diaPago: 5, tasaTEA: 0.45, colorTema: 'blue',
+      descripcion: 'TC DE BBVA',
     },
     {
-      id: 3, cuentaId: 6, nombre: 'OH', banco: 'OH',
-      titular: 'NEYO CARD 3 OH', ultimosDigitos: '8999', fechaExpiracion: '09/30',
-      marca: 'VISA', moneda: 'PEN', lineaCredito: 16500, saldoUsado: 0,
-      diaCorte: 5, diaPago: 2, tasaTEA: 0.45, colorTema: 'cyan',
+      id: 3, cuentaId: 12, nombre: 'BCP TC', banco: 'BCP',
+      titular: 'Neyo 3', ultimosDigitos: '8932', fechaExpiracion: '03/27',
+      marca: 'VISA', moneda: 'PEN', lineaCredito: 6500, saldoUsado: 220,
+      diaCorte: 5, diaPago: 10, tasaTEA: 0.45, colorTema: 'blue',
+      descripcion: 'TC DE BCP',
+    },
+    {
+      id: 4, cuentaId: 13, nombre: 'OH / SIP ', banco: 'OH',
+      titular: 'Neyo 4', ultimosDigitos: '8932', fechaExpiracion: '03/27',
+      marca: 'VISA', moneda: 'PEN', lineaCredito: 16500, saldoUsado: 520,
+      diaCorte: 4, diaPago: 2, tasaTEA: 0.45, colorTema: 'amber',
+      descripcion: 'TC DE OH / SIP',
     },
   ],
   
   ciclosTarjeta: [
-    //{ id: 1, tarjetaId: 1, fechaCorte: '2025-04-28', fechaPago: '2025-05-13', montoFacturado: 1820, pagoMinimo: 180, estado: 'pendiente' },
-    //{ id: 2, tarjetaId: 2, fechaCorte: '2025-04-15', fechaPago: '2025-05-05', montoFacturado: 320, pagoMinimo: 32, estado: 'pendiente' },
+    { id: 1, tarjetaId: 1, fechaCorte: '2026-06-05', fechaPago: '2026-06-02', montoFacturado: 120, pagoMinimo: 30, estado: 'pendiente' },
+    { id: 2, tarjetaId: 2, fechaCorte: '2026-06-05', fechaPago: '2026-06-03', montoFacturado: 100, pagoMinimo: 32, estado: 'pendiente' },
+    { id: 3, tarjetaId: 3, fechaCorte: '2026-06-05', fechaPago: '2026-06-05', montoFacturado: 220, pagoMinimo: 32, estado: 'pendiente' },
+    { id: 4, tarjetaId: 4, fechaCorte: '2026-06-05', fechaPago: '2026-06-10', montoFacturado: 520, pagoMinimo: 32, estado: 'pendiente' },
   ],
   
   /* CATEGORÍAS CON JERARQUÍA
@@ -59,7 +73,7 @@ const MockData = {
      categoriaPadreId = X     -> es subcategoría de X
   */
   categorias: [
-    // ===== EGRESOS PRINCIPALES =====
+     //===== EGRESOS PRINCIPALES =====
     { id: 1, nombre: 'Alimentación', tipo: 'egreso', icono: '🍔', color: 'red', categoriaPadreId: null },
       { id: 11, nombre: 'Supermercado', tipo: 'egreso', icono: '🛒', color: 'red', categoriaPadreId: 1 },
       { id: 12, nombre: 'Restaurantes', tipo: 'egreso', icono: '🍽️', color: 'red', categoriaPadreId: 1 },
@@ -105,7 +119,7 @@ const MockData = {
   ],
   
   transacciones: [
-    //{ id: 1, cuentaId: 2, categoriaId: 11, tipo: 'egreso', monto: 145.30, moneda: 'PEN', descripcion: 'Plaza Vea', fecha: '2025-05-05', esCredito: false },
+    { id: 1, cuentaId: 2, categoriaId: 11, tipo: 'egreso', monto: 145.30, moneda: 'PEN', descripcion: 'Plaza Vea', fecha: '2025-05-05', esCredito: false },
     //{ id: 2, cuentaId: 2, categoriaId: 100, tipo: 'ingreso', monto: 4800, moneda: 'PEN', descripcion: 'Sueldo Mayo', fecha: '2025-05-04', esCredito: false },
     //{ id: 3, cuentaId: 5, categoriaId: 51, tipo: 'egreso', monto: 44.90, moneda: 'PEN', descripcion: 'Netflix', fecha: '2025-05-02', esCredito: true, tarjetaId: 1 },
     //{ id: 4, cuentaId: 1, categoriaId: 22, tipo: 'egreso', monto: 18.50, moneda: 'PEN', descripcion: 'Uber', fecha: '2025-05-01', esCredito: false },
@@ -114,7 +128,7 @@ const MockData = {
   ],
   
   presupuestos: [
-    //{ id: 1, categoriaId: 1, monto: 1000, moneda: 'PEN', gastado: 650, mes: 5, anio: 2025 },
+    { id: 1, categoriaId: 1, monto: 1000, moneda: 'PEN', gastado: 650, mes: 5, anio: 2025 },
     //{ id: 2, categoriaId: 2, monto: 500, moneda: 'PEN', gastado: 425, mes: 5, anio: 2025 },
     //{ id: 3, categoriaId: 3, monto: 300, moneda: 'PEN', gastado: 330, mes: 5, anio: 2025 },
   ],
@@ -126,26 +140,28 @@ const MockData = {
      activo: true/false
   */
   gastosFijos: [
-    //{
-    //  id: 1,
-    //  nombre: 'Netflix',
-    //  tipo: 'fijo',
-    //  esSuscripcion: true,
-    //  categoriaId: 51,
-    //  cuentaId: 5, // Tarjeta BCP
-    //  monto: 44.90,
-    //  moneda: 'PEN',
-    //  frecuencia: 'mensual',
-    //  diaCobro: 2,
-    //  icono: '🎬',
-    //  color: 'red',
-    //  activo: true,
-    //  historico: [
-    //    { fecha: '2025-05-02', monto: 44.90, pagado: true },
-    //    { fecha: '2025-04-02', monto: 44.90, pagado: true },
-    //    { fecha: '2025-03-02', monto: 44.90, pagado: true },
-    //  ],
-    //},
+    {
+      id: 1,
+      nombre: 'Netflix',
+      tipo: 'fijo',
+      esSuscripcion: true,
+      categoriaId: 51,
+      cuentaId: 5, // Tarjeta BCP
+      monto: 44.90,
+      moneda: 'PEN',
+      frecuencia: 'mensual',
+      diaCobro: 2,
+      icono: '🎬',
+      color: 'red',
+      activo: true,
+      historico: [
+        { fecha: '2026-07-02', monto: 44.90, pagado: true },
+        { fecha: '2026-06-02', monto: 44.90, pagado: true },
+        { fecha: '2026-05-02', monto: 44.90, pagado: true },
+        { fecha: '2026-04-02', monto: 44.90, pagado: true },
+        { fecha: '2026-03-02', monto: 44.90, pagado: true },
+      ],
+    },
     //{
     //  id: 2,
     //  nombre: 'Spotify Premium',
@@ -245,49 +261,49 @@ const MockData = {
   
   /* DEUDAS / PRÉSTAMOS VIGENTES */
   deudas: [
-    //{
-    //  id: 1,
-    //  nombre: 'Préstamo Vehicular BCP',
-    //  acreedor: 'BCP',
-    //  capital: 35000,
-    //  moneda: 'PEN',
-    //  tasaTEA: 0.18,
-    //  plazoMeses: 36,
-    //  cuotasPagadas: 8,
-    //  sistema: 'frances',
-    //  diaPago: 15,
-    //  fechaInicio: '2024-09-15',
-    //  cuentaPagoId: 2,
-    //  categoriaId: 8,
-    //  icono: '🚗',
-    //  color: 'amber',
-    //  activo: true,
-    //},
+    {
+      id: 1,
+      nombre: 'Préstamo Vehicular BCP',
+      acreedor: 'BCP',
+      capital: 35000,
+      moneda: 'PEN',
+      tasaTEA: 0.18,
+      plazoMeses: 36,
+      cuotasPagadas: 8,
+      sistema: 'frances',
+      diaPago: 15,
+      fechaInicio: '2024-09-15',
+      cuentaPagoId: 2,
+      categoriaId: 8,
+      icono: '🚗',
+      color: 'amber',
+      activo: true,
+    },
   ],
   
   /* METAS DE AHORRO */
   metas: [
-    //{
-    //  id: 1,
-    //  nombre: 'Fondo de emergencia',
-    //  descripcion: '6 meses de gastos como respaldo',
-    //  montoObjetivo: 18000,
-    //  montoActual: 4500,
-    //  moneda: 'PEN',
-    //  fechaLimite: '2025-12-31',
-    //  fechaCreacion: '2025-01-15',
-    //  cuentaAhorroId: 4, // BBVA Ahorros
-    //  icono: '🛡️',
-    //  color: 'cyan',
-    //  prioridad: 'alta',
-    //  activa: true,
-    //  historial: [
-    //    { fecha: '2025-01-20', monto: 1000, tipo: 'aporte' },
-    //    { fecha: '2025-02-15', monto: 1500, tipo: 'aporte' },
-    //    { fecha: '2025-03-15', monto: 1000, tipo: 'aporte' },
-    //    { fecha: '2025-04-15', monto: 1000, tipo: 'aporte' },
-    //  ],
-    //},
+    {
+      id: 1,
+      nombre: 'Fondo de emergencia',
+      descripcion: '6 meses de gastos como respaldo',
+      montoObjetivo: 18000,
+      montoActual: 4500,
+      moneda: 'PEN',
+      fechaLimite: '2025-12-31',
+      fechaCreacion: '2025-01-15',
+      cuentaAhorroId: 4, // BBVA Ahorros
+      icono: '🛡️',
+      color: 'cyan',
+      prioridad: 'alta',
+      activa: true,
+      historial: [
+        { fecha: '2025-01-20', monto: 1000, tipo: 'aporte' },
+        { fecha: '2025-02-15', monto: 1500, tipo: 'aporte' },
+        { fecha: '2025-03-15', monto: 1000, tipo: 'aporte' },
+        { fecha: '2025-04-15', monto: 1000, tipo: 'aporte' },
+      ],
+    },
     //{
     //  id: 2,
     //  nombre: 'Vacaciones a Cusco',

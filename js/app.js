@@ -1,8 +1,15 @@
 /* ============================================
    APP.JS - Punto de entrada
+   ============================================
+   v0.10.1 — Cambios:
+   - Stats reorganizados en una sola fila (5 cards)
+   - Slider de tarjetas movido debajo de los stats
+   - Nuevo resumen lateral derecho con detalles de tarjeta
+   - Mini-gráfico de evolución de uso (30 días)
+   - Mismo layout aplicado a página de tarjetas
    ============================================ */
 
-const APP_VERSION = '0.10.0';
+const APP_VERSION = '0.10.1';
 const APP_NAME = 'FinanzApp';
 const APP_BUILD = '2026-05-11';
 
