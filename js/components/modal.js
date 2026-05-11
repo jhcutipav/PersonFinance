@@ -13,7 +13,13 @@ const Modal = {
    * Abre el modal con el HTML dado
    */
   abrir({ titulo, contenido, onCerrar = null, ancho = 'normal' }) {
-    this.cerrar(); // Cerrar cualquier modal abierto
+    // Si ya hay un modal abierto, removerlo INMEDIATAMENTE (sin animación)
+    // Esto evita race conditions cuando se abre un modal mientras otro se está cerrando
+    if (this.contenedor) {
+      this.contenedor.remove();
+      this.contenedor = null;
+      document.removeEventListener('keydown', this.escListener);
+    }
     
     this.onCerrar = onCerrar;
     
@@ -56,19 +62,31 @@ const Modal = {
   cerrar() {
     if (!this.contenedor) return;
     
-    this.contenedor.classList.remove('active');
+    // Guardar referencia al contenedor actual ANTES del setTimeout
+    // para evitar que un modal nuevo abierto en ese intervalo sea removido
+    const contenedorACerrar = this.contenedor;
+    const onCerrarCallback = this.onCerrar;
+    
+    contenedorACerrar.classList.remove('active');
     document.removeEventListener('keydown', this.escListener);
     
+    // Limpiar referencias inmediatamente
+    this.contenedor = null;
+    this.onCerrar = null;
+    
     setTimeout(() => {
-      if (this.contenedor) {
-        this.contenedor.remove();
-        this.contenedor = null;
+      // Solo remover el contenedor original, no el nuevo si hay
+      if (contenedorACerrar && contenedorACerrar.parentNode) {
+        contenedorACerrar.remove();
       }
-      document.body.style.overflow = '';
       
-      if (this.onCerrar) {
-        this.onCerrar();
-        this.onCerrar = null;
+      // Restaurar scroll solo si no hay otro modal abierto
+      if (!this.contenedor) {
+        document.body.style.overflow = '';
+      }
+      
+      if (onCerrarCallback) {
+        onCerrarCallback();
       }
     }, 200);
   },

@@ -132,6 +132,13 @@ const Tarjetas = {
         <button class="btn-secondary" id="btnNuevoConsumo">+ Nuevo consumo</button>
       </div>
       
+      ${tarjeta.descripcion ? `
+        <div class="glass-card" style="padding:12px 16px;margin-bottom:var(--space-md);background:linear-gradient(135deg, rgba(20, 240, 205, 0.05), transparent);border-color:rgba(20, 240, 205, 0.2);">
+          <div style="font-size:0.6875rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">📝 Notas</div>
+          <div style="font-size:0.875rem;color:var(--text-secondary);line-height:1.5;">${tarjeta.descripcion}</div>
+        </div>
+      ` : ''}
+      
       <!-- Stats -->
       <div class="tarjeta-stats-grid">
         <div class="glass-card tarjeta-stat">

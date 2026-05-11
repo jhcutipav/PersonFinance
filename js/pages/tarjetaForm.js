@@ -18,6 +18,7 @@ const TarjetaForm = {
     diaPago: 13,
     tasaTEA: 0.85,
     colorTema: 'purple',
+    descripcion: '',
   },
   
   onGuardado: null,
@@ -28,7 +29,7 @@ const TarjetaForm = {
     if (id) {
       const t = API.obtenerTarjetaPorId(id);
       if (!t) return;
-      this.estado = { ...t };
+      this.estado = { ...t, descripcion: t.descripcion || '' };
     } else {
       const usuario = API.obtenerUsuario();
       this.estado = {
@@ -45,6 +46,7 @@ const TarjetaForm = {
         diaPago: 13,
         tasaTEA: 0.85,
         colorTema: 'purple',
+        descripcion: '',
       };
     }
     
@@ -148,6 +150,14 @@ const TarjetaForm = {
           <div class="form-helper">Color para identificarla en gráficos y dashboard</div>
         </div>
         
+        <!-- Descripción / Notas -->
+        <div class="form-group">
+          <label class="form-label">Descripción / Notas <span style="font-weight:normal;color:var(--text-tertiary);">(opcional)</span></label>
+          <textarea class="form-input" id="tarjDescripcion" rows="3" maxlength="300"
+                    placeholder="Ej: Tarjeta principal para compras del mes, mejor cashback en restaurantes, etc.">${this.estado.descripcion || ''}</textarea>
+          <div class="form-helper">Esta nota aparecerá en el detalle de la tarjeta</div>
+        </div>
+        
         <div class="modal-actions">
           ${this.estado.id ? `
             <button type="button" class="btn-danger" id="btnEliminarTarj">Eliminar</button>
@@ -223,6 +233,14 @@ const TarjetaForm = {
       this.estado.colorTema = colorId;
       this.actualizarPreview();
     });
+    
+    // Descripción
+    const descEl = document.getElementById('tarjDescripcion');
+    if (descEl) {
+      descEl.addEventListener('input', (e) => {
+        this.estado.descripcion = e.target.value;
+      });
+    }
     
     // Botones
     document.getElementById('btnGuardarTarj').addEventListener('click', () => this.guardar());

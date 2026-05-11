@@ -253,6 +253,7 @@ const API = {
       monto: parseFloat(datos.monto),
       moneda: cuenta.moneda,
       descripcion: datos.descripcion || '',
+      notas: datos.notas || '',
       fecha: datos.fecha || new Date().toISOString().split('T')[0],
       esCredito: cuenta.tipo === 'credito',
     };
@@ -307,6 +308,7 @@ const API = {
       monto: parseFloat(datos.monto),
       moneda: cuenta.moneda,
       descripcion: datos.descripcion || '',
+      notas: datos.notas || '',
       fecha: datos.fecha,
       esCredito: cuenta.tipo === 'credito',
     };
@@ -602,6 +604,7 @@ const API = {
       diaPago: parseInt(datos.diaPago),
       tasaTEA: parseFloat(datos.tasaTEA) || 0.85,
       colorTema: datos.colorTema || 'purple',
+      descripcion: datos.descripcion || '',
     };
     tarjetas.push(nueva);
     Storage.guardar('tarjetas', tarjetas);

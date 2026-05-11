@@ -14,6 +14,7 @@ const TransaccionForm = {
     categoriaPadreId: null,
     categoriaId: null,
     descripcion: '',
+    notas: '',
     fecha: new Date().toISOString().split('T')[0],
     enCuotas: false,
     cuotasTotal: 3,
@@ -99,6 +100,7 @@ const TransaccionForm = {
         categoriaPadreId: padre || trans.categoriaId,
         categoriaId: trans.categoriaId,
         descripcion: trans.descripcion || '',
+        notas: trans.notas || '',
         fecha: trans.fecha,
       };
     } else {
@@ -112,6 +114,7 @@ const TransaccionForm = {
         categoriaPadreId: null,
         categoriaId: null,
         descripcion: '',
+        notas: '',
         fecha: new Date().toISOString().split('T')[0],
       };
     }
@@ -201,6 +204,14 @@ const TransaccionForm = {
         <!-- Cuotas (solo si la cuenta es tarjeta de crédito) -->
         <div id="cuotasSection" style="${this.esCredito() ? '' : 'display:none;'}">
           ${this.renderCuotasSection()}
+        </div>
+        
+        <!-- Notas extendidas -->
+        <div class="form-group">
+          <label class="form-label">Notas <span style="font-weight:normal;color:var(--text-tertiary);">(opcional)</span></label>
+          <textarea class="form-input" id="transNotas" rows="3" maxlength="500"
+                    placeholder="Detalles adicionales: dónde fue, con quién, motivo, etc.">${this.estado.notas || ''}</textarea>
+          <div class="form-helper">Aparecerá en el detalle de la transacción</div>
         </div>
         
         <!-- Acciones -->
@@ -338,6 +349,14 @@ const TransaccionForm = {
     document.getElementById('transDescripcion').addEventListener('input', (e) => {
       this.estado.descripcion = e.target.value;
     });
+    
+    // Notas
+    const notasEl = document.getElementById('transNotas');
+    if (notasEl) {
+      notasEl.addEventListener('input', (e) => {
+        this.estado.notas = e.target.value;
+      });
+    }
     
     // Categorías principales
     document.querySelectorAll('.category-option').forEach(btn => {

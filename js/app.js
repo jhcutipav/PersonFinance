@@ -2,6 +2,10 @@
    APP.JS - Punto de entrada
    ============================================ */
 
+const APP_VERSION = '0.10.0';
+const APP_NAME = 'FinanzApp';
+const APP_BUILD = '2026-05-11';
+
 const App = {
   
   estado: {
@@ -10,6 +14,9 @@ const App = {
   },
   
   init() {
+    console.log(`%c💎 ${APP_NAME} v${APP_VERSION}`, 'background:linear-gradient(135deg,#14F0CD,#06B6D4);color:#0A0E1A;padding:6px 12px;border-radius:6px;font-weight:700;');
+    console.log(`Build: ${APP_BUILD}`);
+    
     // 1. Tema (lo primero para que no haya parpadeo)
     Theme.init();
     
@@ -77,6 +84,17 @@ const App = {
     
     const avatarEl = document.getElementById('profileAvatar');
     if (avatarEl) avatarEl.textContent = usuario.nombre.charAt(0).toUpperCase();
+    
+    // Sidebar user card
+    const sidebarName = document.getElementById('sidebarUserName');
+    if (sidebarName) sidebarName.textContent = usuario.nombre;
+    
+    const sidebarAvatar = document.getElementById('sidebarUserAvatar');
+    if (sidebarAvatar) sidebarAvatar.textContent = usuario.nombre.charAt(0).toUpperCase();
+    
+    // Versión
+    const versionEl = document.getElementById('sidebarVersionLabel');
+    if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
   },
   
   configurarNavegacion() {

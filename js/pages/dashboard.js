@@ -9,10 +9,20 @@ const Dashboard = {
   tabActiva: 'activity', // activity | spending | income
   historyTab: 'history', // history | upcoming
   filtroActividad: 'todas', // 'todas' | 'cuenta_X' | 'tarjeta_X'
+  graficoTipoActivo: 0, // índice del tipo de gráfico (línea, barras, donut, radial)
+  TIPOS_GRAFICO: ['linea', 'barras', 'donut', 'radial'],
+  autoplayInterval: null,
+  AUTOPLAY_MS: 15000,
   
   render(container, monedaVista = 'PEN') {
     this.monedaVista = monedaVista;
     Graficos.destruirTodos();
+    
+    // Limpiar autoplay anterior si existía
+    if (this.autoplayInterval) {
+      clearInterval(this.autoplayInterval);
+      this.autoplayInterval = null;
+    }
     
     container.innerHTML = `
       <div class="dashboard-layout">
@@ -232,17 +242,21 @@ const Dashboard = {
       if (btnNext) btnNext.disabled = (index === tarjetas.length - 1);
     };
     
-    if (btnPrev) btnPrev.addEventListener('click', () => irASlide(this.tarjetaActiva - 1));
-    if (btnNext) btnNext.addEventListener('click', () => irASlide(this.tarjetaActiva + 1));
+    if (btnPrev) btnPrev.addEventListener('click', () => { irASlide(this.tarjetaActiva - 1); this.resetTarjetasAutoplay(); });
+    if (btnNext) btnNext.addEventListener('click', () => { irASlide(this.tarjetaActiva + 1); this.resetTarjetasAutoplay(); });
     
     indicators.forEach(dot => {
-      dot.addEventListener('click', () => irASlide(parseInt(dot.dataset.slide, 10)));
+      dot.addEventListener('click', () => { 
+        irASlide(parseInt(dot.dataset.slide, 10)); 
+        this.resetTarjetasAutoplay();
+      });
     });
     
     track.querySelectorAll('.card-slide').forEach(slide => {
       slide.addEventListener('click', () => {
         if (slide.classList.contains('is-active')) return;
         irASlide(parseInt(slide.dataset.index, 10));
+        this.resetTarjetasAutoplay();
       });
     });
     
@@ -253,10 +267,43 @@ const Dashboard = {
       if (Math.abs(diff) < 50) return;
       if (diff > 0 && this.tarjetaActiva < tarjetas.length - 1) irASlide(this.tarjetaActiva + 1);
       else if (diff < 0 && this.tarjetaActiva > 0) irASlide(this.tarjetaActiva - 1);
+      this.resetTarjetasAutoplay();
     }, { passive: true });
     
     if (btnPrev) btnPrev.disabled = (this.tarjetaActiva === 0);
     if (btnNext) btnNext.disabled = (this.tarjetaActiva === tarjetas.length - 1);
+    
+    // Auto-play del slider de tarjetas (15s)
+    if (tarjetas.length > 1) {
+      this.iniciarTarjetasAutoplay(tarjetas.length, irASlide);
+      
+      // Pausa al hover
+      const slider = document.querySelector('.cards-slider');
+      if (slider) {
+        slider.addEventListener('mouseenter', () => this.pausarTarjetasAutoplay());
+        slider.addEventListener('mouseleave', () => this.iniciarTarjetasAutoplay(tarjetas.length, irASlide));
+      }
+    }
+  },
+  
+  iniciarTarjetasAutoplay(total, irASlide) {
+    this.pausarTarjetasAutoplay();
+    this._tarjetasAutoplay = setInterval(() => {
+      const next = (this.tarjetaActiva + 1) % total;
+      irASlide(next);
+    }, this.AUTOPLAY_MS);
+  },
+  
+  pausarTarjetasAutoplay() {
+    if (this._tarjetasAutoplay) {
+      clearInterval(this._tarjetasAutoplay);
+      this._tarjetasAutoplay = null;
+    }
+  },
+  
+  resetTarjetasAutoplay() {
+    // El próximo evento de mouseenter/leave del slider lo reiniciará si corresponde
+    this.pausarTarjetasAutoplay();
   },
   
   actualizarClasesSlides(total) {
@@ -354,11 +401,42 @@ const Dashboard = {
             <div style="font-size:0.6875rem; color:var(--text-tertiary);">${rango}</div>
           </div>
         </div>
+        
+        <!-- Slider de tipos de gráfico -->
+        <div class="grafico-slider-wrap" id="graficoSliderWrap">
+          <button class="grafico-slider-arrow grafico-slider-prev" aria-label="Anterior">‹</button>
+          <div class="grafico-slider-title" id="graficoTipoLabel">${this.getNombreTipoGrafico()}</div>
+          <button class="grafico-slider-arrow grafico-slider-next" aria-label="Siguiente">›</button>
+        </div>
+        
         <div class="activity-graph-canvas">
           <canvas id="chartActivity"></canvas>
         </div>
+        
+        <!-- Dots del slider -->
+        <div class="grafico-slider-dots">
+          ${this.TIPOS_GRAFICO.map((tipo, i) => `
+            <button class="grafico-dot ${i === this.graficoTipoActivo ? 'active' : ''}" 
+                    data-tipo-idx="${i}" 
+                    aria-label="${this.getNombreTipo(tipo)}"></button>
+          `).join('')}
+        </div>
       </div>
     `;
+  },
+  
+  getNombreTipoGrafico() {
+    return this.getNombreTipo(this.TIPOS_GRAFICO[this.graficoTipoActivo]);
+  },
+  
+  getNombreTipo(tipo) {
+    const map = {
+      linea: '📈 Línea del tiempo',
+      barras: '📊 Barras por día',
+      donut: '🍩 Por categorías',
+      radial: '🎯 Radar comparativo',
+    };
+    return map[tipo] || tipo;
   },
   
   /**
@@ -400,7 +478,28 @@ const Dashboard = {
   },
   
   /**
-   * Renderiza el gráfico de actividad con el filtro aplicado
+   * Obtiene el color principal del filtro activo (color de la cuenta/tarjeta)
+   */
+  obtenerColorFiltro() {
+    if (this.filtroActividad === 'todas') {
+      return this.tabActiva === 'income' ? '#10B981' : '#14F0CD';
+    }
+    
+    if (this.filtroActividad.startsWith('cuenta_')) {
+      const id = parseInt(this.filtroActividad.split('_')[1]);
+      const c = API.obtenerCuentaPorId(id);
+      if (c && c.color) return ColorPicker.obtenerHex(c.color);
+    } else if (this.filtroActividad.startsWith('tarjeta_')) {
+      const id = parseInt(this.filtroActividad.split('_')[1]);
+      const t = API.obtenerTarjetas().find(t => t.id === id);
+      if (t && t.colorTema) return ColorPicker.obtenerHex(t.colorTema);
+    }
+    
+    return this.tabActiva === 'income' ? '#10B981' : '#14F0CD';
+  },
+  
+  /**
+   * Renderiza el gráfico de actividad según el tipo seleccionado en el slider
    */
   renderChartActividad() {
     const canvas = document.getElementById('chartActivity');
@@ -408,23 +507,40 @@ const Dashboard = {
     
     Graficos.destruir('chartActivity');
     
+    const tipo = this.TIPOS_GRAFICO[this.graficoTipoActivo];
+    
+    switch (tipo) {
+      case 'linea':  this.renderChartLinea(canvas); break;
+      case 'barras': this.renderChartBarras(canvas); break;
+      case 'donut':  this.renderChartDonut(canvas); break;
+      case 'radial': this.renderChartRadial(canvas); break;
+    }
+    
+    // Actualizar label del slider
+    const label = document.getElementById('graficoTipoLabel');
+    if (label) label.textContent = this.getNombreTipoGrafico();
+    
+    // Actualizar dots
+    document.querySelectorAll('.grafico-dot').forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.graficoTipoActivo);
+    });
+  },
+  
+  /**
+   * GRÁFICO 1: Línea del tiempo (egresos/ingresos diarios)
+   */
+  renderChartLinea(canvas) {
     const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
     const ahora = new Date();
     const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
     
-    // Obtener transacciones filtradas del mes actual
     const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
     const fechaFin = ahora.toISOString().split('T')[0];
     let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
     
-    // Filtrar por tipo según tab
-    if (this.tabActiva === 'income') {
-      trans = trans.filter(t => t.tipo === 'ingreso');
-    } else {
-      trans = trans.filter(t => t.tipo === 'egreso');
-    }
+    if (this.tabActiva === 'income') trans = trans.filter(t => t.tipo === 'ingreso');
+    else trans = trans.filter(t => t.tipo === 'egreso');
     
-    // Agrupar por día
     const datosPorDia = new Array(diasEnMes).fill(0);
     trans.forEach(t => {
       const dia = new Date(t.fecha).getDate();
@@ -433,14 +549,14 @@ const Dashboard = {
     
     const labels = Array.from({ length: diasEnMes }, (_, i) => i + 1);
     const colorTema = Theme.coloresGrafico();
-    
+    const colorPrincipal = this.obtenerColorFiltro();
     const ctx = canvas.getContext('2d');
-    const colorPrincipal = this.tabActiva === 'income' ? '#10B981' : '#14F0CD';
-    const colorRgb = this.tabActiva === 'income' ? '16, 185, 129' : '20, 240, 205';
     
+    // Gradient dinámico desde el color
+    const rgb = this.hexToRgb(colorPrincipal);
     const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-    gradient.addColorStop(0, `rgba(${colorRgb}, 0.3)`);
-    gradient.addColorStop(1, `rgba(${colorRgb}, 0)`);
+    gradient.addColorStop(0, `rgba(${rgb}, 0.3)`);
+    gradient.addColorStop(1, `rgba(${rgb}, 0)`);
     
     Graficos.instancias['chartActivity'] = new Chart(ctx, {
       type: 'line',
@@ -456,8 +572,6 @@ const Dashboard = {
           pointRadius: 0,
           pointHoverRadius: 5,
           pointBackgroundColor: colorPrincipal,
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
         }],
       },
       options: {
@@ -478,21 +592,232 @@ const Dashboard = {
           },
         },
         scales: {
-          x: {
-            grid: { color: colorTema.grid },
-            ticks: { color: colorTema.textSecondary, font: { size: 10 } },
+          x: { grid: { color: colorTema.grid }, ticks: { color: colorTema.textSecondary, font: { size: 10 } } },
+          y: { grid: { color: colorTema.grid }, ticks: { color: colorTema.textSecondary, font: { size: 10 }, callback: (val) => Formato.formatearMoneda(val, moneda).replace('.00', '') } },
+        },
+      },
+    });
+  },
+  
+  /**
+   * GRÁFICO 2: Barras por día
+   */
+  renderChartBarras(canvas) {
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    const ahora = new Date();
+    const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+    
+    const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const fechaFin = ahora.toISOString().split('T')[0];
+    let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+    
+    if (this.tabActiva === 'income') trans = trans.filter(t => t.tipo === 'ingreso');
+    else trans = trans.filter(t => t.tipo === 'egreso');
+    
+    const datosPorDia = new Array(diasEnMes).fill(0);
+    trans.forEach(t => {
+      const dia = new Date(t.fecha).getDate();
+      datosPorDia[dia - 1] += Formato.convertir(t.monto, t.moneda, moneda);
+    });
+    
+    const labels = Array.from({ length: diasEnMes }, (_, i) => i + 1);
+    const colorTema = Theme.coloresGrafico();
+    const colorPrincipal = this.obtenerColorFiltro();
+    
+    Graficos.instancias['chartActivity'] = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: datosPorDia,
+          backgroundColor: colorPrincipal,
+          borderRadius: 4,
+          barPercentage: 0.7,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 41, 0.95)',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              title: (items) => `Día ${items[0].label}`,
+              label: (item) => Formato.formatearMoneda(item.parsed.y, moneda),
+            },
           },
-          y: {
-            grid: { color: colorTema.grid },
-            ticks: {
-              color: colorTema.textSecondary,
-              font: { size: 10 },
-              callback: (val) => Formato.formatearMoneda(val, moneda).replace('.00', ''),
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: colorTema.textSecondary, font: { size: 10 } } },
+          y: { grid: { color: colorTema.grid }, ticks: { color: colorTema.textSecondary, font: { size: 10 }, callback: (val) => Formato.formatearMoneda(val, moneda).replace('.00', '') } },
+        },
+      },
+    });
+  },
+  
+  /**
+   * GRÁFICO 3: Donut por categorías
+   */
+  renderChartDonut(canvas) {
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    const ahora = new Date();
+    
+    const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const fechaFin = ahora.toISOString().split('T')[0];
+    let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+    
+    if (this.tabActiva === 'income') trans = trans.filter(t => t.tipo === 'ingreso');
+    else trans = trans.filter(t => t.tipo === 'egreso');
+    
+    // Agrupar por categoría padre
+    const porCategoria = {};
+    trans.forEach(t => {
+      const cat = API.obtenerCategoriaPorId(t.categoriaId);
+      if (!cat) return;
+      const padre = cat.categoriaPadreId ? API.obtenerCategoriaPorId(cat.categoriaPadreId) : cat;
+      if (!padre) return;
+      
+      if (!porCategoria[padre.id]) {
+        porCategoria[padre.id] = { nombre: padre.nombre, icono: padre.icono, total: 0 };
+      }
+      porCategoria[padre.id].total += Formato.convertir(t.monto, t.moneda, moneda);
+    });
+    
+    const categorias = Object.values(porCategoria).sort((a, b) => b.total - a.total).slice(0, 8);
+    
+    if (categorias.length === 0) {
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = Theme.coloresGrafico().textSecondary;
+      ctx.font = '14px Inter';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sin datos para este filtro', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+    
+    const colores = ['#14F0CD', '#06B6D4', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#EC4899', '#3B82F6'];
+    
+    Graficos.instancias['chartActivity'] = new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: categorias.map(c => `${c.icono} ${c.nombre}`),
+        datasets: [{
+          data: categorias.map(c => c.total),
+          backgroundColor: colores.slice(0, categorias.length),
+          borderWidth: 0,
+          hoverOffset: 8,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              color: Theme.coloresGrafico().textSecondary,
+              font: { size: 11 },
+              padding: 8,
+              boxWidth: 12,
+            },
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 41, 0.95)',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (item) => `${item.label}: ${Formato.formatearMoneda(item.parsed, moneda)}`,
             },
           },
         },
       },
     });
+  },
+  
+  /**
+   * GRÁFICO 4: Radar comparativo (ingresos vs egresos por categoría)
+   */
+  renderChartRadial(canvas) {
+    const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+    const ahora = new Date();
+    
+    const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+    const fechaFin = ahora.toISOString().split('T')[0];
+    const trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+    
+    // Categorías padre de egreso
+    const cats = API.obtenerCategorias({ soloPrincipales: true })
+      .filter(c => c.tipo === 'egreso').slice(0, 6);
+    
+    const labels = cats.map(c => c.nombre);
+    const dataEgreso = cats.map(cat => {
+      const subs = API.obtenerSubcategorias(cat.id).map(s => s.id);
+      const ids = [cat.id, ...subs];
+      const transCat = trans.filter(t => ids.includes(t.categoriaId) && t.tipo === 'egreso');
+      return Formato.sumarEnMoneda(transCat, moneda);
+    });
+    
+    const colorTema = Theme.coloresGrafico();
+    const colorPrincipal = this.obtenerColorFiltro();
+    const rgb = this.hexToRgb(colorPrincipal);
+    
+    Graficos.instancias['chartActivity'] = new Chart(canvas.getContext('2d'), {
+      type: 'radar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Egresos',
+          data: dataEgreso,
+          borderColor: colorPrincipal,
+          backgroundColor: `rgba(${rgb}, 0.2)`,
+          borderWidth: 2,
+          pointBackgroundColor: colorPrincipal,
+          pointRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 41, 0.95)',
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (item) => Formato.formatearMoneda(item.parsed.r, moneda),
+            },
+          },
+        },
+        scales: {
+          r: {
+            grid: { color: colorTema.grid },
+            angleLines: { color: colorTema.grid },
+            ticks: {
+              color: colorTema.textSecondary,
+              font: { size: 9 },
+              backdropColor: 'transparent',
+            },
+            pointLabels: { color: colorTema.textSecondary, font: { size: 11 } },
+          },
+        },
+      },
+    });
+  },
+  
+  /**
+   * Helper: convierte hex a "r, g, b" string
+   */
+  hexToRgb(hex) {
+    if (!hex || !hex.startsWith('#')) return '20, 240, 205';
+    const num = parseInt(hex.slice(1), 16);
+    const r = (num >> 16) & 0xff;
+    const g = (num >> 8) & 0xff;
+    const b = num & 0xff;
+    return `${r}, ${g}, ${b}`;
   },
   
   renderShortcuts() {
@@ -986,10 +1311,95 @@ const Dashboard = {
     if (filtroEl) {
       filtroEl.addEventListener('change', (e) => {
         this.filtroActividad = e.target.value;
-        // Re-renderizar solo el card del gráfico para evitar parpadeo
+        // Re-renderizar el gráfico Y los stats arriba
         const container = document.getElementById('pageContent');
         if (container) this.render(container, this.monedaVista);
       });
+    }
+    
+    // Slider de tipos de gráfico - botones de flecha
+    const btnPrev = document.querySelector('.grafico-slider-prev');
+    const btnNext = document.querySelector('.grafico-slider-next');
+    if (btnPrev) btnPrev.addEventListener('click', () => this.cambiarTipoGrafico(-1));
+    if (btnNext) btnNext.addEventListener('click', () => this.cambiarTipoGrafico(1));
+    
+    // Dots del slider
+    document.querySelectorAll('.grafico-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        const idx = parseInt(dot.dataset.tipoIdx);
+        this.graficoTipoActivo = idx;
+        this.renderChartActividad();
+        this.resetAutoplay();
+      });
+    });
+    
+    // Iniciar autoplay del slider
+    this.iniciarAutoplay();
+    
+    // Slider de tarjetas - botones (si hay)
+    const cardPrev = document.querySelector('.card-nav-btn.card-nav-prev');
+    const cardNext = document.querySelector('.card-nav-btn.card-nav-next');
+    if (cardPrev) cardPrev.addEventListener('click', () => this.cambiarTarjeta(-1));
+    if (cardNext) cardNext.addEventListener('click', () => this.cambiarTarjeta(1));
+    
+    document.querySelectorAll('.card-dot').forEach((dot, i) => {
+      dot.addEventListener('click', () => {
+        this.tarjetaActiva = i;
+        const container = document.getElementById('pageContent');
+        if (container) this.render(container, this.monedaVista);
+      });
+    });
+    
+    // Pausa del autoplay al hover sobre el card del gráfico
+    const graphCard = document.querySelector('.activity-graph-card');
+    if (graphCard) {
+      graphCard.addEventListener('mouseenter', () => this.pausarAutoplay());
+      graphCard.addEventListener('mouseleave', () => this.iniciarAutoplay());
+    }
+  },
+  
+  /**
+   * Cambia el tipo de gráfico activo (-1 anterior, +1 siguiente)
+   */
+  cambiarTipoGrafico(delta) {
+    const total = this.TIPOS_GRAFICO.length;
+    this.graficoTipoActivo = (this.graficoTipoActivo + delta + total) % total;
+    this.renderChartActividad();
+    this.resetAutoplay();
+  },
+  
+  /**
+   * Cambia la tarjeta activa del carrusel (-1 anterior, +1 siguiente)
+   */
+  cambiarTarjeta(delta) {
+    const tarjetas = API.obtenerTarjetas();
+    if (tarjetas.length === 0) return;
+    this.tarjetaActiva = (this.tarjetaActiva + delta + tarjetas.length) % tarjetas.length;
+    const container = document.getElementById('pageContent');
+    if (container) this.render(container, this.monedaVista);
+  },
+  
+  /**
+   * Inicia el autoplay del slider de gráficos
+   */
+  iniciarAutoplay() {
+    this.pausarAutoplay();
+    this.autoplayInterval = setInterval(() => {
+      this.cambiarTipoGrafico(1);
+    }, this.AUTOPLAY_MS);
+  },
+  
+  pausarAutoplay() {
+    if (this.autoplayInterval) {
+      clearInterval(this.autoplayInterval);
+      this.autoplayInterval = null;
+    }
+  },
+  
+  resetAutoplay() {
+    if (this.autoplayInterval) {
+      this.pausarAutoplay();
+      this.iniciarAutoplay();
     }
   },
 };

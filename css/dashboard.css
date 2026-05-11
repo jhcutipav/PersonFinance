@@ -1208,3 +1208,86 @@
     font-size: 0.6875rem;
   }
 }
+
+/* ============ SLIDER DE TIPOS DE GRÁFICO ============ */
+.grafico-slider-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0 8px;
+}
+
+.grafico-slider-arrow {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.grafico-slider-arrow:hover {
+  background: var(--accent-primary);
+  color: #0A0E1A;
+  transform: scale(1.05);
+}
+
+.grafico-slider-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 180px;
+  text-align: center;
+  transition: opacity 0.2s;
+}
+
+.grafico-slider-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.grafico-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: none;
+  background: var(--card-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+}
+
+.grafico-dot.active {
+  background: var(--accent-primary);
+  width: 20px;
+  border-radius: 3px;
+}
+
+.grafico-dot:hover {
+  background: var(--accent-secondary);
+}
+
+@media (max-width: 600px) {
+  .grafico-slider-title {
+    min-width: 120px;
+    font-size: 0.75rem;
+  }
+  
+  .grafico-slider-arrow {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+  }
+}
