@@ -544,6 +544,63 @@ const API = {
   },
   
   /**
+   * v0.10.2 — Egresos del mes pagados con cuentas de DÉBITO
+   */
+  calcularEgresosDebitoMes(monedaDestino = 'PEN') {
+    const ahora = new Date();
+    const trans = this.obtenerTransacciones({
+      tipo: 'egreso',
+      mes: ahora.getMonth() + 1,
+      anio: ahora.getFullYear(),
+    }).filter(t => {
+      if (t.tarjetaId) return false;
+      const cuenta = this.obtenerCuentaPorId(t.cuentaId);
+      return cuenta && cuenta.tipo === 'debito';
+    });
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  /**
+   * v0.10.2 — Egresos del mes pagados en EFECTIVO
+   */
+  calcularEgresosEfectivoMes(monedaDestino = 'PEN') {
+    const ahora = new Date();
+    const trans = this.obtenerTransacciones({
+      tipo: 'egreso',
+      mes: ahora.getMonth() + 1,
+      anio: ahora.getFullYear(),
+    }).filter(t => {
+      if (t.tarjetaId) return false;
+      const cuenta = this.obtenerCuentaPorId(t.cuentaId);
+      return cuenta && cuenta.tipo === 'efectivo';
+    });
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  /**
+   * v0.10.2 — Patrimonio de crédito: suma de líneas totales y uso global
+   * estado: 'normal' (<30%), 'alerta' (30-70%), 'peligro' (>70%)
+   */
+  calcularPatrimonioCredito(monedaDestino = 'PEN') {
+    const tarjetas = this.obtenerTarjetas();
+    let lineaTotal = 0, usado = 0;
+    
+    tarjetas.forEach(t => {
+      lineaTotal += Formato.convertir(t.lineaCredito || 0, t.moneda, monedaDestino);
+      usado += Formato.convertir(t.saldoUsado || 0, t.moneda, monedaDestino);
+    });
+    
+    const disponible = lineaTotal - usado;
+    const porcentaje = lineaTotal > 0 ? (usado / lineaTotal) * 100 : 0;
+    
+    let estado = 'normal', mensaje = 'Normal', color = '#10B981';
+    if (porcentaje >= 70) { estado = 'peligro'; mensaje = 'Peligro'; color = '#EF4444'; }
+    else if (porcentaje >= 30) { estado = 'alerta'; mensaje = 'Alerta'; color = '#F59E0B'; }
+    
+    return { lineaTotal, usado, disponible, porcentaje, estado, mensaje, color };
+  },
+  
+  /**
    * Total de dinero movido en transferencias durante el mes actual
    */
   calcularTransferenciasMes(monedaDestino = 'PEN') {

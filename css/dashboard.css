@@ -1541,3 +1541,161 @@
     font-size: 1rem;
   }
 }
+
+/* ============================================
+   v0.10.2 — Patrimonio de crédito con semáforo
+   ============================================ */
+
+.patrimonio-card {
+  position: relative;
+}
+
+.patrimonio-card.patrimonio-normal {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.patrimonio-card.patrimonio-alerta {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.patrimonio-card.patrimonio-peligro {
+  border-color: rgba(239, 68, 68, 0.4);
+  animation: peligroGlow 2s ease-in-out infinite;
+}
+
+@keyframes peligroGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 20px 0 rgba(239, 68, 68, 0.15); }
+}
+
+.patrimonio-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.patrimonio-progress {
+  margin: 12px 0;
+}
+
+.patrimonio-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.patrimonio-progress-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.patrimonio-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+}
+
+.patrimonio-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  background: var(--card-bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.patrimonio-stat-label {
+  font-size: 0.625rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.patrimonio-stat-value {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+/* ============================================
+   v0.10.2 — Resumen egresos por origen
+   ============================================ */
+
+.resumen-egresos-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: var(--space-md) 0 var(--space-sm);
+  padding: 0 4px;
+}
+
+.resumen-egresos-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.resumen-egresos-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.stat-card-placeholder {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+/* ============================================
+   v0.10.2 — Botón "Ver más" en aside cards
+   ============================================ */
+
+.aside-vermas-btn {
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--card-border);
+  color: var(--text-secondary);
+  padding: 8px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all var(--transition-fast);
+}
+
+.aside-vermas-btn:hover {
+  background: var(--card-bg-secondary);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+/* ============================================
+   v0.10.2 — Cuenta principal (estrella)
+   ============================================ */
+
+.favorite-card-principal {
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.05), transparent);
+  border-color: rgba(20, 240, 205, 0.2);
+}
+
+/* ============================================
+   v0.10.2 — Estado badge en barra de uso
+   ============================================ */
+
+.estado-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

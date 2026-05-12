@@ -14,6 +14,16 @@ const Tarjetas = {
     if (container) this.render(container, this.monedaVista);
   },
   
+  /**
+   * v0.10.2 — Color de semáforo según porcentaje de uso de la tarjeta
+   * <30% verde · 30-70% amarillo · >70% rojo
+   */
+  colorPorUso(porcentaje) {
+    if (porcentaje >= 70) return { color: '#EF4444', mensaje: 'Peligro' };
+    if (porcentaje >= 30) return { color: '#F59E0B', mensaje: 'Alerta' };
+    return { color: '#10B981', mensaje: 'Normal' };
+  },
+  
   /* ============================================
      PÁGINA TARJETAS
      v0.10.1 — Cambios:
@@ -129,17 +139,25 @@ const Tarjetas = {
           </div>
         </div>
         
-        <!-- Barra de uso -->
-        <div class="resumen-side-progress">
-          <div class="resumen-side-progress-label">
-            <span>Uso de línea de crédito</span>
-            <strong>${pctUsado.toFixed(1)}%</strong>
+        <!-- Barra de uso con SEMÁFORO (v0.10.2) -->
+        ${(() => {
+          const sem = this.colorPorUso(pctUsado);
+          return `
+          <div class="resumen-side-progress">
+            <div class="resumen-side-progress-label">
+              <span>Uso de línea de crédito</span>
+              <span style="display:flex;align-items:center;gap:6px;">
+                <span class="estado-badge" style="background:${sem.color}22;color:${sem.color};border:1px solid ${sem.color}44;">${sem.mensaje}</span>
+                <strong style="color:${sem.color};">${pctUsado.toFixed(1)}%</strong>
+              </span>
+            </div>
+            <div class="resumen-side-progress-bar">
+              <div class="resumen-side-progress-fill" 
+                   style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${sem.color},${sem.color}cc);"></div>
+            </div>
           </div>
-          <div class="resumen-side-progress-bar">
-            <div class="resumen-side-progress-fill" 
-                 style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${colorHex},${colorHex}cc);"></div>
-          </div>
-        </div>
+          `;
+        })()}
         
         <!-- Extra: consumo y próximo pago -->
         <div class="resumen-side-extra">
@@ -229,17 +247,25 @@ const Tarjetas = {
           </div>
         </div>
         
-        <!-- Barra de uso -->
-        <div class="resumen-side-progress">
-          <div class="resumen-side-progress-label">
-            <span>Uso de línea de crédito</span>
-            <strong>${pctUsado.toFixed(1)}%</strong>
+        <!-- Barra de uso con SEMÁFORO (v0.10.2) -->
+        ${(() => {
+          const sem = this.colorPorUso(pctUsado);
+          return `
+          <div class="resumen-side-progress">
+            <div class="resumen-side-progress-label">
+              <span>Uso de línea de crédito</span>
+              <span style="display:flex;align-items:center;gap:6px;">
+                <span class="estado-badge" style="background:${sem.color}22;color:${sem.color};border:1px solid ${sem.color}44;">${sem.mensaje}</span>
+                <strong style="color:${sem.color};">${pctUsado.toFixed(1)}%</strong>
+              </span>
+            </div>
+            <div class="resumen-side-progress-bar">
+              <div class="resumen-side-progress-fill" 
+                   style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${sem.color},${sem.color}cc);"></div>
+            </div>
           </div>
-          <div class="resumen-side-progress-bar">
-            <div class="resumen-side-progress-fill" 
-                 style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${colorHex},${colorHex}cc);"></div>
-          </div>
-        </div>
+          `;
+        })()}
         
         <!-- Extra: consumo y próximo pago -->
         <div class="resumen-side-extra">

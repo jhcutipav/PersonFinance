@@ -1,17 +1,19 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
-   v0.10.1 — Cambios:
-   - Stats reorganizados en una sola fila (5 cards)
-   - Slider de tarjetas movido debajo de los stats
-   - Nuevo resumen lateral derecho con detalles de tarjeta
-   - Mini-gráfico de evolución de uso (30 días)
-   - Mismo layout aplicado a página de tarjetas
+   v0.10.2 — Cambios (Fase 1):
+   - Resumen egresos por origen (crédito/débito/efectivo + slot)
+   - Mi Patrimonio rediseñado: solo línea de crédito con semáforo
+     (verde <30% · amarillo 30-70% · rojo >70%)
+   - Aside derecho: máximo 4 items con botón "Ver más" expandible
+     (cuentas, tarjetas, próximos pagos)
+   - Barras de uso de tarjetas con colores de semáforo
+   - Eliminadas restricciones de fecha (permite cargar histórico)
    ============================================ */
 
-const APP_VERSION = '0.10.1';
+const APP_VERSION = '0.10.2';
 const APP_NAME = 'FinanzApp';
-const APP_BUILD = '2026-05-11';
+const APP_BUILD = '2026-05-12';
 
 const App = {
   
