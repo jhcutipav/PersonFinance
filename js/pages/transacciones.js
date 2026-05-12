@@ -109,6 +109,10 @@ const Transacciones = {
   /**
    * Lista de transacciones agrupadas por fecha
    */
+  // v0.10.4 — Estado de paginación
+  paginaActual: 1,
+  porPagina: 25,
+  
   renderLista() {
     const trans = this.obtenerTransaccionesFiltradas();
     
@@ -127,14 +131,80 @@ const Transacciones = {
       `;
     }
     
-    // Agrupar por fecha
-    const grupos = this.agruparPorFecha(trans);
+    // Paginación
+    const total = trans.length;
+    const totalPaginas = Math.ceil(total / this.porPagina);
+    if (this.paginaActual > totalPaginas) this.paginaActual = 1;
+    const inicio = (this.paginaActual - 1) * this.porPagina;
+    const fin = inicio + this.porPagina;
+    const transPagina = trans.slice(inicio, fin);
+    
+    // v0.10.4 — Usa la misma tabla que el dashboard
+    return `
+      <div class="activity-table-wrapper">
+        <table class="activity-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Descripción</th>
+              <th>Categoría</th>
+              <th>Tipo</th>
+              <th class="text-right">Monto</th>
+              <th>Cuenta / Tarjeta</th>
+              <th>Estado</th>
+              <th style="width:32px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transPagina.map(t => Dashboard.renderActivityRow(t)).join('')}
+          </tbody>
+        </table>
+      </div>
+      
+      ${totalPaginas > 1 ? this.renderPaginacion(total, totalPaginas) : ''}
+    `;
+  },
+  
+  /**
+   * v0.10.4 — Controles de paginación
+   */
+  renderPaginacion(totalRegistros, totalPaginas) {
+    const inicio = (this.paginaActual - 1) * this.porPagina + 1;
+    const fin = Math.min(this.paginaActual * this.porPagina, totalRegistros);
     
     return `
-      <div class="trans-list">
-        ${Object.entries(grupos).map(([fecha, items]) => this.renderGrupoFecha(fecha, items)).join('')}
+      <div class="trans-paginacion">
+        <div class="trans-paginacion-info">
+          Mostrando <strong>${inicio}-${fin}</strong> de <strong>${totalRegistros}</strong> movimientos
+        </div>
+        <div class="trans-paginacion-controles">
+          <button class="trans-pag-btn" 
+                  onclick="Transacciones.cambiarPagina(${this.paginaActual - 1})"
+                  ${this.paginaActual === 1 ? 'disabled' : ''}>
+            ← Anterior
+          </button>
+          <span class="trans-paginacion-actual">
+            Página <strong>${this.paginaActual}</strong> de <strong>${totalPaginas}</strong>
+          </span>
+          <button class="trans-pag-btn"
+                  onclick="Transacciones.cambiarPagina(${this.paginaActual + 1})"
+                  ${this.paginaActual === totalPaginas ? 'disabled' : ''}>
+            Siguiente →
+          </button>
+        </div>
       </div>
     `;
+  },
+  
+  cambiarPagina(nuevaPagina) {
+    const trans = this.obtenerTransaccionesFiltradas();
+    const totalPaginas = Math.ceil(trans.length / this.porPagina);
+    if (nuevaPagina < 1 || nuevaPagina > totalPaginas) return;
+    this.paginaActual = nuevaPagina;
+    const c = document.getElementById('transListContainer');
+    if (c) c.innerHTML = this.renderLista();
+    // Scroll arriba
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   },
   
   renderGrupoFecha(fecha, items) {

@@ -16,7 +16,7 @@ const MockData = {
   
   cuentas: [
     { id: 1, nombre: 'Efectivo',          tipo: 'efectivo',  moneda: 'PEN', saldo: 0.0,      activo: true, color: 'green',   icono: '💵', bancarizado: '0' },
-    { id: 2, nombre: 'Interbank S/',      tipo: 'debito',    moneda: 'PEN', saldo: 2000,    activo: true, color: 'green',   icono: '🏦', bancarizado: '1' },
+    { id: 2, nombre: 'Interbank S/',      tipo: 'debito',    moneda: 'PEN', saldo: 2000,    activo: true, color: 'green',   icono: '🏦', bancarizado: '1', esPrincipal: true },
     { id: 3, nombre: 'Plin - INTERBANK',  tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'green',   icono: '📱', bancarizado: '1' },
     { id: 4, nombre: 'BBVA S/',           tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'green',   icono: '🏦', bancarizado: '1' },
     { id: 5, nombre: 'Plin - BBVA',       tipo: 'debito',    moneda: 'PEN', saldo: 0.0,      activo: true, color: 'skylue',  icono: '🏦', bancarizado: '1' },

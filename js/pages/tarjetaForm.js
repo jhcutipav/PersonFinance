@@ -6,6 +6,7 @@ const TarjetaForm = {
   
   estado: {
     id: null,
+    tipoTarjeta: 'credito',  // v0.10.3 — 'credito' | 'debito'
     nombre: '',
     banco: '',
     titular: '',
@@ -19,21 +20,32 @@ const TarjetaForm = {
     tasaTEA: 0.85,
     colorTema: 'purple',
     descripcion: '',
+    cuentaVinculadaId: null, // v0.10.3 — solo para débito
   },
   
   onGuardado: null,
   
-  abrir(id = null, onGuardado = null) {
+  /**
+   * v0.10.3 — Abrir form. Si tipoInicial='debito', precarga como débito.
+   */
+  abrir(id = null, onGuardado = null, tipoInicial = 'credito') {
     this.onGuardado = onGuardado;
     
     if (id) {
       const t = API.obtenerTarjetaPorId(id);
       if (!t) return;
-      this.estado = { ...t, descripcion: t.descripcion || '' };
+      this.estado = { 
+        ...t, 
+        tipoTarjeta: t.tipoTarjeta || 'credito',
+        descripcion: t.descripcion || '',
+        cuentaVinculadaId: t.cuentaVinculadaId || null,
+      };
     } else {
       const usuario = API.obtenerUsuario();
+      const cuentasDebito = API.obtenerCuentas().filter(c => c.tipo === 'debito');
       this.estado = {
         id: null,
+        tipoTarjeta: tipoInicial,
         nombre: '',
         banco: '',
         titular: usuario.nombre,
@@ -47,6 +59,7 @@ const TarjetaForm = {
         tasaTEA: 0.85,
         colorTema: 'purple',
         descripcion: '',
+        cuentaVinculadaId: cuentasDebito[0] ? cuentasDebito[0].id : null,
       };
     }
     
@@ -59,8 +72,31 @@ const TarjetaForm = {
   },
   
   renderForm() {
+    const cuentasDebito = API.obtenerCuentas().filter(c => c.tipo === 'debito');
+    
     return `
       <form id="tarjetaForm" onsubmit="return false;">
+        
+        <!-- v0.10.3 — Selector de tipo: CRÉDITO o DÉBITO -->
+        <div class="form-group">
+          <label class="form-label">Tipo de tarjeta</label>
+          <div class="tipo-tarjeta-selector">
+            <button type="button" class="tipo-tarjeta-btn ${this.estado.tipoTarjeta === 'credito' ? 'active' : ''}" data-tipo="credito">
+              <span class="tipo-tarjeta-icon">💳</span>
+              <div>
+                <div class="tipo-tarjeta-titulo">Crédito</div>
+                <div class="tipo-tarjeta-desc">Con línea de crédito y ciclos</div>
+              </div>
+            </button>
+            <button type="button" class="tipo-tarjeta-btn ${this.estado.tipoTarjeta === 'debito' ? 'active' : ''}" data-tipo="debito">
+              <span class="tipo-tarjeta-icon">🏧</span>
+              <div>
+                <div class="tipo-tarjeta-titulo">Débito</div>
+                <div class="tipo-tarjeta-desc">Vinculada a tu cuenta bancaria</div>
+              </div>
+            </button>
+          </div>
+        </div>
         
         <!-- Vista previa pequeña -->
         <div id="tarjetaPreview" style="max-width: 280px; margin: 0 auto var(--space-md);">
@@ -116,31 +152,56 @@ const TarjetaForm = {
         
         <hr style="border: none; border-top: 1px solid var(--glass-border); margin: var(--space-md) 0;">
         
-        <!-- Crédito y ciclos -->
-        <h3 style="font-size: 0.875rem; margin-bottom: var(--space-sm); color: var(--text-secondary);">Línea de crédito y ciclos</h3>
-        
-        <div class="form-group">
-          <label class="form-label">Línea de crédito (${Formato.SIMBOLOS[this.estado.moneda]})</label>
-          <input type="number" class="form-input" id="tarjLinea" placeholder="10000" value="${this.estado.lineaCredito}" step="0.01" min="0">
+        <!-- v0.10.3 — Bloque CRÉDITO (solo si tipoTarjeta === 'credito') -->
+        <div id="bloqueCredito" style="${this.estado.tipoTarjeta === 'credito' ? '' : 'display:none;'}">
+          <h3 style="font-size: 0.875rem; margin-bottom: var(--space-sm); color: var(--text-secondary);">Línea de crédito y ciclos</h3>
+          
+          <div class="form-group">
+            <label class="form-label">Línea de crédito (${Formato.SIMBOLOS[this.estado.moneda]})</label>
+            <input type="number" class="form-input" id="tarjLinea" placeholder="10000" value="${this.estado.lineaCredito}" step="0.01" min="0">
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Día de corte (1-31)</label>
+              <input type="number" class="form-input" id="tarjDiaCorte" value="${this.estado.diaCorte}" min="1" max="31">
+              <div class="form-helper">Día del mes que cierra el ciclo</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Día de pago (1-31)</label>
+              <input type="number" class="form-input" id="tarjDiaPago" value="${this.estado.diaPago}" min="1" max="31">
+              <div class="form-helper">Día del mes para pagar</div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Tasa Efectiva Anual (TEA) %</label>
+            <input type="number" class="form-input" id="tarjTEA" value="${(this.estado.tasaTEA * 100).toFixed(2)}" step="0.01" min="0" max="200">
+            <div class="form-helper">Tasa anual cuando no pagas el total</div>
+          </div>
         </div>
         
-        <div class="form-row">
+        <!-- v0.10.3 — Bloque DÉBITO (solo si tipoTarjeta === 'debito') -->
+        <div id="bloqueDebito" style="${this.estado.tipoTarjeta === 'debito' ? '' : 'display:none;'}">
+          <h3 style="font-size: 0.875rem; margin-bottom: var(--space-sm); color: var(--text-secondary);">Cuenta vinculada</h3>
+          
           <div class="form-group">
-            <label class="form-label">Día de corte (1-31)</label>
-            <input type="number" class="form-input" id="tarjDiaCorte" value="${this.estado.diaCorte}" min="1" max="31">
-            <div class="form-helper">Día del mes que cierra el ciclo</div>
+            <label class="form-label">Cuenta bancaria</label>
+            ${cuentasDebito.length > 0 ? `
+              <select class="form-select" id="tarjCuentaVinculada">
+                ${cuentasDebito.map(c => `
+                  <option value="${c.id}" ${this.estado.cuentaVinculadaId === c.id ? 'selected' : ''}>
+                    ${c.nombre} · ${c.moneda} (${Formato.formatearMoneda(c.saldo, c.moneda)})
+                  </option>
+                `).join('')}
+              </select>
+              <div class="form-helper">Las compras con esta tarjeta debitan de esta cuenta</div>
+            ` : `
+              <div style="padding:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-md);font-size:0.8125rem;color:var(--text-secondary);">
+                ⚠️ No tienes cuentas de débito. Crea una primero en la sección de cuentas para vincular esta tarjeta.
+              </div>
+            `}
           </div>
-          <div class="form-group">
-            <label class="form-label">Día de pago (1-31)</label>
-            <input type="number" class="form-input" id="tarjDiaPago" value="${this.estado.diaPago}" min="1" max="31">
-            <div class="form-helper">Día del mes para pagar</div>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">Tasa Efectiva Anual (TEA) %</label>
-          <input type="number" class="form-input" id="tarjTEA" value="${(this.estado.tasaTEA * 100).toFixed(2)}" step="0.01" min="0" max="200">
-          <div class="form-helper">Tasa anual cuando no pagas el total</div>
         </div>
         
         <!-- Color tema -->
@@ -228,6 +289,33 @@ const TarjetaForm = {
       if (labelLinea) labelLinea.textContent = `Línea de crédito (${Formato.SIMBOLOS[this.estado.moneda]})`;
     });
     
+    // v0.10.3 — Selector tipo crédito/débito
+    document.querySelectorAll('[data-tipo]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tipo = btn.dataset.tipo;
+        this.estado.tipoTarjeta = tipo;
+        
+        // Actualizar UI activa
+        document.querySelectorAll('[data-tipo]').forEach(b => {
+          b.classList.toggle('active', b.dataset.tipo === tipo);
+        });
+        
+        // Mostrar/ocultar bloques
+        const bloqueCredito = document.getElementById('bloqueCredito');
+        const bloqueDebito = document.getElementById('bloqueDebito');
+        if (bloqueCredito) bloqueCredito.style.display = (tipo === 'credito') ? '' : 'none';
+        if (bloqueDebito) bloqueDebito.style.display = (tipo === 'debito') ? '' : 'none';
+      });
+    });
+    
+    // v0.10.3 — Cuenta vinculada (solo débito)
+    const cuentaVinc = document.getElementById('tarjCuentaVinculada');
+    if (cuentaVinc) {
+      cuentaVinc.addEventListener('change', (e) => {
+        this.estado.cuentaVinculadaId = parseInt(e.target.value);
+      });
+    }
+    
     // Color picker
     ColorPicker.configurar((colorId) => {
       this.estado.colorTema = colorId;
@@ -257,24 +345,43 @@ const TarjetaForm = {
   },
   
   guardar() {
-    // Validaciones
+    // Validaciones comunes
     if (!this.estado.nombre || !this.estado.nombre.trim()) {
       Modal.toast('Ingresa el nombre de la tarjeta', 'error');
       document.getElementById('tarjNombre').focus();
       return;
     }
     
-    if (!this.estado.lineaCredito || parseFloat(this.estado.lineaCredito) <= 0) {
-      Modal.toast('Ingresa la línea de crédito', 'error');
-      document.getElementById('tarjLinea').focus();
-      return;
-    }
-    
-    const diaCorte = parseInt(this.estado.diaCorte);
-    const diaPago = parseInt(this.estado.diaPago);
-    if (diaCorte < 1 || diaCorte > 31 || diaPago < 1 || diaPago > 31) {
-      Modal.toast('Días de corte y pago deben estar entre 1 y 31', 'error');
-      return;
+    // v0.10.3 — Validaciones específicas por tipo
+    if (this.estado.tipoTarjeta === 'credito') {
+      if (!this.estado.lineaCredito || parseFloat(this.estado.lineaCredito) <= 0) {
+        Modal.toast('Ingresa la línea de crédito', 'error');
+        document.getElementById('tarjLinea').focus();
+        return;
+      }
+      
+      const diaCorte = parseInt(this.estado.diaCorte);
+      const diaPago = parseInt(this.estado.diaPago);
+      if (diaCorte < 1 || diaCorte > 31 || diaPago < 1 || diaPago > 31) {
+        Modal.toast('Días de corte y pago deben estar entre 1 y 31', 'error');
+        return;
+      }
+    } else {
+      // débito
+      if (!this.estado.cuentaVinculadaId) {
+        Modal.toast('Selecciona una cuenta bancaria para vincular', 'error');
+        return;
+      }
+      
+      // Para débito, copiamos la moneda de la cuenta vinculada
+      const cuentaVinc = API.obtenerCuentaPorId(this.estado.cuentaVinculadaId);
+      if (cuentaVinc) {
+        this.estado.moneda = cuentaVinc.moneda;
+      }
+      
+      // No tiene línea de crédito, día de corte, etc.
+      this.estado.lineaCredito = 0;
+      this.estado.saldoUsado = 0;
     }
     
     try {

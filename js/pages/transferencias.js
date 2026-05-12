@@ -434,7 +434,12 @@ const Transferencias = {
       
       Modal.toast('✓ Transferencia realizada');
       Modal.cerrar();
-      this.refrescar();
+      // v0.10.3 — refrescar la página actual sea cual sea
+      if (typeof App !== 'undefined' && App.cargarPaginaActual) {
+        App.cargarPaginaActual();
+      } else {
+        this.refrescar();
+      }
     } catch (e) {
       Modal.toast('Error: ' + e.message, 'error');
     }

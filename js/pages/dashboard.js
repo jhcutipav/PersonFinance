@@ -95,6 +95,8 @@
       const ingresos = API.calcularIngresosMes(moneda);
       const egresosCash = API.calcularEgresosCashMes(moneda);
       const egresosTarjeta = API.calcularEgresosTarjetaMes(moneda);
+      const egresosDebito = API.calcularEgresosDebitoMes(moneda);
+      const egresosEfectivo = API.calcularEgresosEfectivoMes(moneda);
       const transferencias = API.calcularTransferenciasMes(moneda);
       
       return `
@@ -155,53 +157,62 @@
         </div>
 
         
-        <span> RESUMEN INDIVIDUAL DE TARJETA CREDITO </span>
-
+        <!-- v0.10.2 — Resumen de egresos por origen del pago -->
+        <div class="resumen-egresos-header">
+          <span class="resumen-egresos-title">Egresos del mes por origen</span>
+          <span class="resumen-egresos-subtitle">Cómo se distribuye tu gasto</span>
+        </div>
+        
         <div class="stats-row-top">
-
+          
+          <!-- Card 1: Egresos con tarjeta de crédito -->
           <div class="stat-card">
             <div class="stat-card-icon purple">
               <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-label">Egresos tarjeta</div>
+              <div class="stat-card-label">Tarjetas de crédito</div>
               <div class="stat-card-value text-warning">${Formato.formatearMoneda(egresosTarjeta, moneda)}</div>
               <div class="stat-card-meta">Pagarás en próximo ciclo</div>
             </div>
           </div>
-
+          
+          <!-- Card 2: Egresos con débito -->
           <div class="stat-card">
-            <div class="stat-card-icon purple">
+            <div class="stat-card-icon blue">
               <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-label">Egresos tarjeta</div>
-              <div class="stat-card-value text-warning">${Formato.formatearMoneda(egresosTarjeta, moneda)}</div>
-              <div class="stat-card-meta">Pagarás en próximo ciclo</div>
+              <div class="stat-card-label">Cuentas de débito</div>
+              <div class="stat-card-value text-danger">${Formato.formatearMoneda(egresosDebito, moneda)}</div>
+              <div class="stat-card-meta">Salió de tus cuentas bancarias</div>
             </div>
           </div>
-
+          
+          <!-- Card 3: Egresos en efectivo -->
           <div class="stat-card">
-            <div class="stat-card-icon purple">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            <div class="stat-card-icon green">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-label">Egresos tarjeta</div>
-              <div class="stat-card-value text-warning">${Formato.formatearMoneda(egresosTarjeta, moneda)}</div>
-              <div class="stat-card-meta">Pagarás en próximo ciclo</div>
+              <div class="stat-card-label">Efectivo</div>
+              <div class="stat-card-value text-danger">${Formato.formatearMoneda(egresosEfectivo, moneda)}</div>
+              <div class="stat-card-meta">Pago en efectivo</div>
             </div>
           </div>
-
-          <div class="stat-card">
-            <div class="stat-card-icon purple">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          
+          <!-- Card 4: Placeholder por ahora (reservado para uso futuro) -->
+          <div class="stat-card stat-card-placeholder">
+            <div class="stat-card-icon" style="background:linear-gradient(135deg,#475569,#64748B);color:white;">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
             </div>
             <div class="stat-card-info">
-              <div class="stat-card-label">Egresos tarjeta</div>
-              <div class="stat-card-value text-warning">${Formato.formatearMoneda(egresosTarjeta, moneda)}</div>
-              <div class="stat-card-meta">Pagarás en próximo ciclo</div>
+              <div class="stat-card-label" style="color:var(--text-tertiary);">Slot disponible</div>
+              <div class="stat-card-value" style="color:var(--text-tertiary);font-size:1rem;">—</div>
+              <div class="stat-card-meta">Por definir</div>
             </div>
           </div>
+          
         </div>
         
         <!-- Sección tarjetas + resumen (debajo de stats) -->
@@ -1122,109 +1133,248 @@
       `;
     },
     
+    /* ============================================
+       v0.10.4 — Tabla Recent Activity estilo profesional
+       - 10 movimientos por defecto + botón "Ver más" → página transacciones
+       - Columnas: Fecha · Descripción · Categoría · Tipo · Monto · Cuenta/Tarjeta · Estado · ⋮
+       - Indicador 📝 si tiene notas
+       ============================================ */
     renderHistory() {
-      const trans = API.obtenerTransacciones({ limite: 10 });
+      // Obtener transacciones (no transferencias)
+      const todasTrans = API.obtenerTransacciones({ incluirTransferencias: false });
+      const total = todasTrans.length;
+      const limite = 10;
+      const trans = todasTrans.slice(0, limite);
       
-      // Agrupar por día
-      const grupos = {};
-      trans.forEach(t => {
-        const key = t.fecha;
-        if (!grupos[key]) grupos[key] = [];
-        grupos[key].push(t);
-      });
+      let tablaContenido = '';
       
-      let listaHTML = '';
-      if (Object.keys(grupos).length === 0) {
-        listaHTML = `
-          <div style="text-align:center;padding:var(--space-xl);color:var(--text-tertiary);font-size:0.875rem;">
-            Sin movimientos aún
+      if (trans.length === 0) {
+        tablaContenido = `
+          <div class="activity-table-empty">
+            <div style="font-size:2rem;margin-bottom:8px;">📭</div>
+            <div>Sin movimientos aún</div>
+            <div style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">
+              Crea tu primera transacción con el botón "+ Nueva"
+            </div>
           </div>
         `;
       } else {
-        Object.entries(grupos).forEach(([fecha, items]) => {
-          const fechaObj = new Date(fecha);
-          const labelFecha = `${fechaObj.getDate()} ${Fechas.MESES_CORTOS[fechaObj.getMonth()]}, ${fechaObj.getFullYear()}`;
-          
-          listaHTML += `
-            <div class="history-day-group">
-              <div class="history-day-label">${labelFecha}</div>
-              ${items.map(t => this.renderHistoryItem(t)).join('')}
-            </div>
-          `;
-        });
+        tablaContenido = `
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Descripción</th>
+                <th>Categoría</th>
+                <th>Tipo</th>
+                <th class="text-right">Monto</th>
+                <th>Cuenta / Tarjeta</th>
+                <th>Estado</th>
+                <th style="width:32px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${trans.map(t => Dashboard.renderActivityRow(t)).join('')}
+            </tbody>
+          </table>
+        `;
       }
       
       return `
-        <div class="history-tabs">
-          <button class="history-tab ${this.historyTab === 'history' ? 'active' : ''}" data-history-tab="history">Historial</button>
-          <button class="history-tab ${this.historyTab === 'upcoming' ? 'active' : ''}" data-history-tab="upcoming">Próximos</button>
-          <div class="history-date-selector">
-            <div class="history-date-pill">
-              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-              <span>${Fechas.mesActual()} ${new Date().getFullYear()}</span>
-            </div>
+        <div class="activity-header">
+          <div>
+            <h3 class="activity-title">Actividad reciente</h3>
+            <p class="activity-subtitle">${total} ${total === 1 ? 'movimiento total' : 'movimientos totales'}</p>
+          </div>
+          <div class="activity-actions">
+            <button class="activity-action-btn" id="activityFilter">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+              Filtros
+            </button>
+            <button class="activity-action-btn" id="activitySort">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
+              Ordenar
+            </button>
           </div>
         </div>
-        ${listaHTML}
+        
+        <div class="activity-table-wrapper">
+          ${tablaContenido}
+        </div>
+        
+        ${total > limite ? `
+          <button class="activity-vermas-btn" onclick="App.navegarA('transacciones')">
+            Ver todas (${total}) →
+          </button>
+        ` : ''}
       `;
     },
     
-    renderHistoryItem(trans) {
+    /**
+     * v0.10.4 — Una fila de la tabla de actividad
+     */
+    renderActivityRow(trans) {
       const cat = API.obtenerCategoriaPorId(trans.categoriaId);
       const cuenta = API.obtenerCuentaPorId(trans.cuentaId);
+      const tarjeta = trans.tarjetaId ? API.obtenerTarjetaPorId(trans.tarjetaId) : null;
       const esIngreso = trans.tipo === 'ingreso';
       const signo = esIngreso ? '+' : '-';
-      const cls = esIngreso ? 'positive' : 'negative';
-      const fechaObj = new Date(trans.fecha);
-      const hora = `${fechaObj.getDate()} ${Fechas.MESES_CORTOS[fechaObj.getMonth()]}, ${fechaObj.getFullYear()}`;
+      const fechaObj = new Date(trans.fecha + 'T00:00:00');
+      const fechaCorta = `${String(fechaObj.getDate()).padStart(2, '0')}/${String(fechaObj.getMonth() + 1).padStart(2, '0')}/${fechaObj.getFullYear()}`;
+      
+      // Categoría padre + subcategoría
+      let categoriaTexto = 'Sin categoría';
+      let categoriaIcono = '📁';
+      let categoriaColor = 'slate';
+      if (cat) {
+        categoriaIcono = cat.icono;
+        categoriaColor = cat.color;
+        if (cat.categoriaPadreId) {
+          const padre = API.obtenerCategoriaPorId(cat.categoriaPadreId);
+          categoriaTexto = padre ? `${padre.nombre} · ${cat.nombre}` : cat.nombre;
+        } else {
+          categoriaTexto = cat.nombre;
+        }
+      }
+      
+      // Cuenta/Tarjeta display
+      let fuenteDisplay = '—';
+      let fuenteIcono = '💰';
+      let fuenteColor = '#64748B';
+      if (tarjeta) {
+        fuenteDisplay = tarjeta.nombre;
+        fuenteIcono = '💳';
+        fuenteColor = ColorPicker.obtenerHex(tarjeta.colorTema || 'purple');
+      } else if (cuenta) {
+        fuenteDisplay = cuenta.nombre;
+        fuenteIcono = cuenta.icono || '🏦';
+        fuenteColor = ColorPicker.obtenerHex(cuenta.color || 'blue');
+      }
+      
+      // Estado (en este caso: completado siempre, salvo si fecha futura)
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const esFutura = fechaObj > hoy;
+      const estadoTexto = esFutura ? 'Programado' : 'Completado';
+      const estadoClase = esFutura ? 'estado-scheduled' : 'estado-completed';
+      
+      // Notas
+      const tieneNotas = trans.notas && trans.notas.trim().length > 0;
       
       return `
-        <div class="history-item" onclick="Transacciones.abrirModal(${trans.id})">
-          <div class="history-item-icon icon-box ${cat ? cat.color : 'blue'}">
-            <span style="font-size:16px;">${cat ? cat.icono : '💰'}</span>
-          </div>
-          <div class="history-item-info">
-            <div class="history-item-name">${trans.descripcion || (cat ? cat.nombre : 'Movimiento')}</div>
-            <div class="history-item-meta">${hora}</div>
-          </div>
-          <div class="history-item-tag">${cat ? cat.nombre : 'Otro'}</div>
-          <div class="history-item-amount ${cls}">
-            ${signo}${Formato.formatearMoneda(trans.monto, trans.moneda)}
-          </div>
-        </div>
+        <tr class="activity-row" onclick="TransaccionForm.abrir(${trans.id}, () => App.cargarPaginaActual())">
+          <td class="activity-fecha">${fechaCorta}</td>
+          <td class="activity-desc">
+            <div class="activity-desc-wrap">
+              <span class="activity-desc-text">${trans.descripcion || (cat ? cat.nombre : 'Movimiento')}</span>
+              ${tieneNotas ? `<span class="activity-notas-indicator" title="${trans.notas.substring(0, 100).replace(/"/g, '&quot;')}${trans.notas.length > 100 ? '...' : ''}">📝</span>` : ''}
+            </div>
+          </td>
+          <td>
+            <div class="activity-categoria">
+              <span class="activity-categoria-icon icon-box ${categoriaColor}">${categoriaIcono}</span>
+              <span class="activity-categoria-text" title="${categoriaTexto}">${categoriaTexto.length > 25 ? categoriaTexto.substring(0, 25) + '...' : categoriaTexto}</span>
+            </div>
+          </td>
+          <td>
+            <span class="activity-tipo-badge tipo-${trans.tipo}">
+              ${esIngreso ? '↗ Ingreso' : '↘ Egreso'}
+            </span>
+          </td>
+          <td class="text-right">
+            <span class="activity-monto ${esIngreso ? 'positive' : 'negative'}">
+              ${signo}${Formato.formatearMoneda(trans.monto, trans.moneda)}
+            </span>
+          </td>
+          <td>
+            <div class="activity-fuente">
+              <span class="activity-fuente-dot" style="background:${fuenteColor};"></span>
+              <span class="activity-fuente-icon">${fuenteIcono}</span>
+              <span class="activity-fuente-text" title="${fuenteDisplay}">
+                ${fuenteDisplay.length > 18 ? fuenteDisplay.substring(0, 18) + '...' : fuenteDisplay}
+              </span>
+            </div>
+          </td>
+          <td>
+            <span class="activity-estado ${estadoClase}">${estadoTexto}</span>
+          </td>
+          <td>
+            <button class="activity-row-menu" onclick="event.stopPropagation(); Dashboard.menuRowActividad(${trans.id}, event)" title="Más opciones">⋮</button>
+          </td>
+        </tr>
       `;
+    },
+    
+    /**
+     * v0.10.4 — Menú contextual de una fila (placeholder)
+     */
+    menuRowActividad(transId, event) {
+      // Por ahora: editar/eliminar. Se puede extender luego
+      Modal.confirmar({
+        titulo: 'Acciones',
+        mensaje: '¿Qué deseas hacer con esta transacción?',
+        textoConfirmar: 'Editar',
+        textoCancelar: 'Eliminar',
+        tipoBoton: 'primary',
+        onConfirmar: () => {
+          TransaccionForm.abrir(transId, () => App.cargarPaginaActual());
+        },
+        onCancelar: () => {
+          if (confirm('¿Eliminar esta transacción definitivamente?')) {
+            API.eliminarTransaccion(transId);
+            Modal.toast('Transacción eliminada');
+            App.cargarPaginaActual();
+          }
+        }
+      });
     },
     
     /* ============ ASIDE: PORTFOLIO ============ */
+    /* v0.10.2 — Patrimonio rediseñado: solo línea de crédito con semáforo */
     renderPortfolio() {
       const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
-      const saldo = API.calcularSaldoTotal(moneda);
-      
-      // Calcular cambio vs mes anterior (simulado: ahorro acumulado)
-      const ingresos = API.calcularIngresosMes(moneda);
-      const egresos = API.calcularEgresosMes(moneda);
-      const cambio = ingresos > 0 ? ((ingresos - egresos) / ingresos * 100) : 0;
+      const patrimonio = API.calcularPatrimonioCredito(moneda);
       
       return `
-        <div class="aside-card">
+        <div class="aside-card patrimonio-card patrimonio-${patrimonio.estado}">
           <div class="aside-card-header">
             <div class="aside-card-titles">
-              <div class="aside-card-title">Mi Patrimonio</div>
-              <div class="aside-card-subtitle">Crece tus ingresos</div>
+              <div class="aside-card-title">💳 Línea de crédito total</div>
+              <div class="aside-card-subtitle">Suma de todas tus tarjetas</div>
             </div>
-            <div class="aside-card-actions">
-              <button class="aside-icon-btn" title="Buscar">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-              </button>
-              <button class="aside-icon-btn" title="Notificaciones">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-              </button>
+            <div class="patrimonio-badge" style="background:${patrimonio.color}22;color:${patrimonio.color};border:1px solid ${patrimonio.color}44;">
+              ${patrimonio.mensaje}
             </div>
           </div>
           
-          <div class="portfolio-amount">${Formato.formatearMoneda(saldo, moneda)}</div>
-          <div class="portfolio-change ${cambio >= 0 ? 'positive' : 'negative'}">
-            ${cambio >= 0 ? '↑' : '↓'} ${Math.abs(cambio).toFixed(1)}% este mes
+          <div class="portfolio-amount">${Formato.formatearMoneda(patrimonio.lineaTotal, moneda)}</div>
+          
+          <!-- Barra de uso con color de semáforo -->
+          <div class="patrimonio-progress">
+            <div class="patrimonio-progress-label">
+              <span>Uso global</span>
+              <strong style="color:${patrimonio.color};">${patrimonio.porcentaje.toFixed(1)}%</strong>
+            </div>
+            <div class="patrimonio-progress-bar">
+              <div class="patrimonio-progress-fill" 
+                   style="width:${Math.min(patrimonio.porcentaje, 100)}%;background:linear-gradient(90deg, ${patrimonio.color}, ${patrimonio.color}cc);"></div>
+            </div>
+          </div>
+          
+          <!-- Desglose: usado / disponible -->
+          <div class="patrimonio-stats">
+            <div class="patrimonio-stat">
+              <div class="patrimonio-stat-label">Usado</div>
+              <div class="patrimonio-stat-value" style="color:${patrimonio.color};">
+                ${Formato.formatearMoneda(patrimonio.usado, moneda)}
+              </div>
+            </div>
+            <div class="patrimonio-stat">
+              <div class="patrimonio-stat-label">Disponible</div>
+              <div class="patrimonio-stat-value text-success">
+                ${Formato.formatearMoneda(patrimonio.disponible, moneda)}
+              </div>
+            </div>
           </div>
           
           <div class="portfolio-actions">
@@ -1267,8 +1417,18 @@
       const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
       const finMes = ahora.toISOString().split('T')[0];
       
-      // Renderizar cuentas
-      const cardsCuentas = cuentas.map(c => {
+      // v0.10.2 — Estado de expansión por sección
+      this._cuentasExpandido = this._cuentasExpandido || false;
+      this._tarjetasExpandido = this._tarjetasExpandido || false;
+      
+      const LIMIT = 4;
+      const cuentasMostrar = this._cuentasExpandido ? cuentas : cuentas.slice(0, LIMIT);
+      const tarjetasMostrar = this._tarjetasExpandido ? tarjetas : tarjetas.slice(0, LIMIT);
+      const cuentasExtra = cuentas.length - LIMIT;
+      const tarjetasExtra = tarjetas.length - LIMIT;
+      
+      // Renderizar cuentas (solo las que toca mostrar)
+      const cardsCuentas = cuentasMostrar.map(c => {
         const color = c.color || 'blue';
         const colorHex = ColorPicker.obtenerHex(color);
         const inicial = c.nombre.charAt(0).toUpperCase();
@@ -1279,18 +1439,25 @@
         const ingresoMes = transMes.filter(t => t.tipo === 'ingreso').reduce((s, t) => s + t.monto, 0);
         const egresoMes = transMes.filter(t => t.tipo === 'egreso').reduce((s, t) => s + t.monto, 0);
         const cambio = ingresoMes - egresoMes;
-        const cambioPct = c.saldo > 0 ? (cambio / c.saldo) * 100 : 0;
         
         const tipoLabel = c.tipo === 'efectivo' ? 'EFECTIVO' : c.tipo === 'billetera' ? 'BILLETERA' : 'BANCO';
+        const esPrincipal = c.esPrincipal === true;
         
         return `
-          <div class="favorite-card" style="border-left: 3px solid ${colorHex};">
+          <div class="favorite-card ${esPrincipal ? 'favorite-card-principal' : ''}" style="border-left: 3px solid ${colorHex};">
             <div class="favorite-header">
               <div class="favorite-icon" style="background: ${colorHex};">${inicial}</div>
               <div style="flex:1;min-width:0;">
-                <div class="favorite-name" title="${c.nombre}">${c.nombre.length > 14 ? c.nombre.substring(0, 14) + '...' : c.nombre}</div>
+                <div class="favorite-name" title="${c.nombre}">
+                  ${c.nombre.length > 14 ? c.nombre.substring(0, 14) + '...' : c.nombre}
+                </div>
                 <div class="favorite-symbol">${tipoLabel} · ${c.moneda}</div>
               </div>
+              <button class="favorite-star ${esPrincipal ? 'is-principal' : ''}" 
+                      onclick="event.stopPropagation(); Dashboard.toggleCuentaPrincipal(${c.id})"
+                      title="${esPrincipal ? 'Cuenta principal' : 'Marcar como principal'}">
+                ${esPrincipal ? '⭐' : '☆'}
+              </button>
             </div>
             <div class="favorite-sparkline">
               <canvas id="sparkFav_cuenta_${c.id}" data-color="${colorHex}"></canvas>
@@ -1305,11 +1472,10 @@
         `;
       }).join('');
       
-      // Renderizar tarjetas de crédito
-      const cardsTarjetas = tarjetas.map(t => {
+      // Renderizar tarjetas (solo las que toca mostrar)
+      const cardsTarjetas = tarjetasMostrar.map(t => {
         const colorId = t.colorTema || 'purple';
         const colorHex = ColorPicker.obtenerHex(colorId);
-        const inicial = '💳';
         
         // Calcular consumos del mes con esta tarjeta
         const trans = API.obtenerTransacciones({});
@@ -1320,7 +1486,7 @@
         );
         const consumoMes = transTarjetaMes.reduce((s, tr) => s + tr.monto, 0);
         
-        const pctUsado = t.lineaCredito > 0 ? (t.usado / t.lineaCredito) * 100 : 0;
+        const pctUsado = t.lineaCredito > 0 ? (t.saldoUsado / t.lineaCredito) * 100 : 0;
         
         return `
           <div class="favorite-card" style="border-left: 3px solid ${colorHex};">
@@ -1339,12 +1505,12 @@
               </div>
               <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.625rem;color:var(--text-tertiary);">
                 <span>${pctUsado.toFixed(0)}% usado</span>
-                <span>Disp: ${Formato.formatearMoneda(t.lineaCredito - t.usado, t.moneda).replace('.00', '')}</span>
+                <span>Disp: ${Formato.formatearMoneda(t.lineaCredito - t.saldoUsado, t.moneda).replace('.00', '')}</span>
               </div>
             </div>
             
             <div class="favorite-stats">
-              <span class="favorite-amount">${Formato.formatearMoneda(t.usado, t.moneda)}</span>
+              <span class="favorite-amount">${Formato.formatearMoneda(t.saldoUsado, t.moneda)}</span>
               <span class="favorite-change ${consumoMes > 0 ? 'negative' : 'positive'}">
                 ${consumoMes > 0 ? '+' : ''}${Formato.formatearMoneda(consumoMes, t.moneda)}
               </span>
@@ -1364,6 +1530,13 @@
           <div class="favorites-grid">
             ${cardsCuentas}
           </div>
+          ${cuentasExtra > 0 ? `
+            <button class="aside-vermas-btn" onclick="Dashboard.toggleExpandido('cuentas')">
+              ${this._cuentasExpandido 
+                ? '▲ Ver menos' 
+                : `▼ Ver ${cuentasExtra} ${cuentasExtra === 1 ? 'cuenta' : 'cuentas'} más`}
+            </button>
+          ` : ''}
         </div>
         
         ${tarjetas.length > 0 ? `
@@ -1377,9 +1550,49 @@
             <div class="favorites-grid">
               ${cardsTarjetas}
             </div>
+            ${tarjetasExtra > 0 ? `
+              <button class="aside-vermas-btn" onclick="Dashboard.toggleExpandido('tarjetas')">
+                ${this._tarjetasExpandido 
+                  ? '▲ Ver menos' 
+                  : `▼ Ver ${tarjetasExtra} ${tarjetasExtra === 1 ? 'tarjeta' : 'tarjetas'} más`}
+              </button>
+            ` : ''}
           </div>
         ` : ''}
       `;
+    },
+    
+    /* v0.10.2 — Toggle de expansión del aside */
+    toggleExpandido(seccion) {
+      if (seccion === 'cuentas') this._cuentasExpandido = !this._cuentasExpandido;
+      else if (seccion === 'tarjetas') this._tarjetasExpandido = !this._tarjetasExpandido;
+      else if (seccion === 'upcoming') this._upcomingExpandido = !this._upcomingExpandido;
+      
+      // Re-renderizar solo el aside (no todo el dashboard)
+      const container = document.getElementById('pageContent');
+      if (container) this.render(container, this.monedaVista);
+    },
+    
+    /* v0.10.3 — Marcar cuenta como principal (desmarca las demás) */
+    toggleCuentaPrincipal(cuentaId) {
+      const cuenta = API.obtenerCuentaPorId(cuentaId);
+      if (!cuenta) return;
+      
+      if (cuenta.esPrincipal) {
+        // Desmarcar
+        const cuentas = Storage.cargar('cuentas') || [];
+        const idx = cuentas.findIndex(c => c.id === cuentaId);
+        if (idx >= 0) cuentas[idx].esPrincipal = false;
+        Storage.guardar('cuentas', cuentas);
+        Modal.toast('Cuenta principal removida');
+      } else {
+        // Marcar (desmarca las demás automáticamente)
+        API.marcarCuentaPrincipal(cuentaId);
+        Modal.toast(`⭐ ${cuenta.nombre} ahora es tu cuenta principal`);
+      }
+      
+      const container = document.getElementById('pageContent');
+      if (container) this.render(container, this.monedaVista);
     },
     
     renderSparklinesFavorites() {
@@ -1505,6 +1718,12 @@
         `;
       }
       
+      // v0.10.2 — Aplicar límite de 4 + botón Ver más
+      this._upcomingExpandido = this._upcomingExpandido || false;
+      const LIMIT_UP = 4;
+      const itemsMostrar = this._upcomingExpandido ? items : items.slice(0, LIMIT_UP);
+      const itemsExtra = items.length - LIMIT_UP;
+      
       return `
         <div class="aside-card">
           <div class="aside-card-header">
@@ -1515,7 +1734,7 @@
           </div>
           
           <div class="upcoming-list">
-            ${items.slice(0, 5).map((it, i) => `
+            ${itemsMostrar.map((it, i) => `
               <div class="upcoming-item" onclick="App.navegarA('${it.tipo === 'tarjeta' ? 'tarjetas' : 'gastos-fijos'}')">
                 <div class="upcoming-icon" style="background:${it.color};">
                   ${it.icono ? `<span style="font-size:14px;">${it.icono}</span>` : it.inicial}
@@ -1533,6 +1752,14 @@
               </div>
             `).join('')}
           </div>
+          
+          ${itemsExtra > 0 ? `
+            <button class="aside-vermas-btn" onclick="Dashboard.toggleExpandido('upcoming')">
+              ${this._upcomingExpandido 
+                ? '▲ Ver menos' 
+                : `▼ Ver ${itemsExtra} ${itemsExtra === 1 ? 'pago más' : 'pagos más'}`}
+            </button>
+          ` : ''}
         </div>
       `;
     },

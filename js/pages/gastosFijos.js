@@ -498,32 +498,24 @@ const GastosFijos = {
     const gasto = API.obtenerGastoFijoPorId(id);
     if (!gasto) return;
     
-    // Si es variable, abrir un mini-modal para que ponga el monto exacto
-    if (gasto.tipo === 'variable') {
-      this.abrirModalPagoVariable(gasto);
-      return;
-    }
-    
-    // Si es fijo, confirmar directamente
-    Modal.confirmar({
-      titulo: `Pagar ${gasto.nombre}`,
-      mensaje: `Se registrará un egreso de ${Formato.formatearMoneda(gasto.monto, gasto.moneda)} desde "${API.obtenerCuentaPorId(gasto.cuentaId)?.nombre || ''}". ¿Confirmar?`,
-      textoConfirmar: 'Pagar',
-      onConfirmar: () => {
-        try {
-          API.marcarGastoComoPagado(id);
-          Modal.toast(`✓ ${gasto.nombre} pagado`);
-          this.refrescar();
-        } catch (e) {
-          Modal.toast('Error: ' + e.message, 'error');
-        }
-      },
-    });
+    // v0.10.4 — Modal completo para elegir cuenta + monto (fijo o variable)
+    this.abrirModalPago(gasto);
   },
   
-  abrirModalPagoVariable(gasto) {
-    const promedio = API.calcularPromedio(gasto);
-    const cuenta = API.obtenerCuentaPorId(gasto.cuentaId);
+  /**
+   * v0.10.4 — Modal unificado de pago de gasto fijo
+   * Permite elegir cuenta de débito O tarjeta de crédito
+   */
+  abrirModalPago(gasto) {
+    const esVariable = gasto.tipo === 'variable';
+    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito');
+    const tarjetasCredito = API.obtenerTarjetas().filter(t => !t.tipoTarjeta || t.tipoTarjeta === 'credito');
+    
+    // Calcular monto sugerido
+    const montoSugerido = esVariable ? API.calcularPromedio(gasto) : gasto.monto;
+    
+    // Por defecto seleccionar la cuenta original del gasto
+    const cuentaDefaultId = gasto.cuentaId;
     
     Modal.abrir({
       titulo: `Pagar ${gasto.nombre}`,
@@ -532,34 +524,77 @@ const GastosFijos = {
         <div class="form-group">
           <label class="form-label">Monto a pagar</label>
           <div class="trans-modal-amount" style="margin:0;">
-            <input type="number" id="pagoVarMonto" class="trans-modal-amount-input" 
+            <input type="number" id="pagoGFMonto" class="trans-modal-amount-input" 
                    placeholder="0.00" step="0.01" min="0" 
-                   value="${promedio.toFixed(2)}" inputmode="decimal" autofocus>
+                   value="${montoSugerido.toFixed(2)}" inputmode="decimal" autofocus>
             <div class="trans-modal-amount-currency">${Formato.SIMBOLOS[gasto.moneda]}</div>
           </div>
+          ${esVariable ? `
+            <div class="form-helper">📊 Promedio últimos meses: <strong>${Formato.formatearMoneda(API.calcularPromedio(gasto), gasto.moneda)}</strong></div>
+          ` : ''}
         </div>
         
-        <div class="cuotas-info" style="margin-bottom:var(--space-md);">
-          📊 Promedio últimos meses: <strong>${Formato.formatearMoneda(promedio, gasto.moneda)}</strong><br>
-          💳 Se cobrará desde: <strong>${cuenta ? cuenta.nombre : ''}</strong>
+        <!-- v0.10.4 — Selector de origen del pago (cuenta o tarjeta) -->
+        <div class="form-group">
+          <label class="form-label">Pagar desde</label>
+          <select class="form-select" id="pagoGFOrigen">
+            ${cuentas.length > 0 ? `
+              <optgroup label="💵 Cuentas bancarias / efectivo">
+                ${cuentas.map(c => `
+                  <option value="cuenta_${c.id}" ${c.id === cuentaDefaultId ? 'selected' : ''}>
+                    ${c.icono || '🏦'} ${c.nombre} (${Formato.formatearMoneda(c.saldo, c.moneda)})
+                  </option>
+                `).join('')}
+              </optgroup>
+            ` : ''}
+            ${tarjetasCredito.length > 0 ? `
+              <optgroup label="💳 Tarjetas de crédito">
+                ${tarjetasCredito.map(t => {
+                  const disponible = t.lineaCredito - t.saldoUsado;
+                  return `
+                    <option value="tarjeta_${t.id}">
+                      💳 ${t.nombre} (disp: ${Formato.formatearMoneda(disponible, t.moneda)})
+                    </option>
+                  `;
+                }).join('')}
+              </optgroup>
+            ` : ''}
+          </select>
+          <div class="form-helper">El monto se descontará de aquí (o se sumará al saldo usado si es tarjeta de crédito)</div>
         </div>
         
         <div class="modal-actions">
           <button type="button" class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
-          <button type="button" class="btn-primary" id="confirmPagoVar">Pagar</button>
+          <button type="button" class="btn-primary" id="confirmPagoGF">Registrar pago</button>
         </div>
       `,
     });
     
-    document.getElementById('confirmPagoVar').addEventListener('click', () => {
-      const monto = parseFloat(document.getElementById('pagoVarMonto').value);
+    document.getElementById('confirmPagoGF').addEventListener('click', () => {
+      const monto = parseFloat(document.getElementById('pagoGFMonto').value);
       if (!monto || monto <= 0) {
         Modal.toast('Ingresa un monto válido', 'error');
         return;
       }
       
+      const origenValue = document.getElementById('pagoGFOrigen').value;
+      const [origenTipo, origenId] = origenValue.split('_');
+      
       try {
-        API.marcarGastoComoPagado(gasto.id, { monto });
+        if (origenTipo === 'cuenta') {
+          // Pago con cuenta de débito/efectivo
+          API.marcarGastoComoPagado(gasto.id, { 
+            monto, 
+            cuentaPagoId: parseInt(origenId)
+          });
+        } else if (origenTipo === 'tarjeta') {
+          // Pago con tarjeta de crédito (suma al saldoUsado)
+          API.marcarGastoComoPagado(gasto.id, { 
+            monto, 
+            tarjetaId: parseInt(origenId)
+          });
+        }
+        
         Modal.toast(`✓ ${gasto.nombre} pagado`);
         Modal.cerrar();
         this.refrescar();
@@ -567,5 +602,10 @@ const GastosFijos = {
         Modal.toast('Error: ' + e.message, 'error');
       }
     });
+  },
+  
+  // Mantengo método antiguo por compatibilidad (deprecado)
+  abrirModalPagoVariable(gasto) {
+    this.abrirModalPago(gasto);
   },
 };

@@ -435,3 +435,134 @@
     position: static;
   }
 }
+
+/* ============================================
+   v0.10.3 — Tabs Crédito/Débito + Tipo tarjeta
+   ============================================ */
+
+.tarjetas-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--space-md);
+  padding: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+}
+
+.tarjetas-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tarjetas-tab:hover {
+  background: var(--card-bg-secondary);
+  color: var(--text-primary);
+}
+
+.tarjetas-tab.active {
+  background: linear-gradient(135deg, #14F0CD, #06B6D4);
+  color: #0A0E1A;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(20, 240, 205, 0.25);
+}
+
+.tarjetas-tab-icon {
+  font-size: 1.125rem;
+}
+
+.tarjetas-tab-count {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}
+
+.tarjetas-tab.active .tarjetas-tab-count {
+  background: rgba(10, 14, 26, 0.2);
+}
+
+.tarjetas-tab-nueva {
+  font-size: 0.8125rem;
+  padding: 8px 14px;
+}
+
+@media (max-width: 768px) {
+  .tarjetas-tabs {
+    flex-wrap: wrap;
+  }
+  .tarjetas-tab-nueva {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-top: 8px;
+    justify-content: center;
+  }
+}
+
+/* Selector de tipo en el form */
+.tipo-tarjeta-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.tipo-tarjeta-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--card-bg-secondary);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+}
+
+.tipo-tarjeta-btn:hover {
+  border-color: var(--accent-primary);
+}
+
+.tipo-tarjeta-btn.active {
+  border-color: var(--accent-primary);
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.08), transparent);
+  box-shadow: 0 0 0 3px rgba(20, 240, 205, 0.1);
+}
+
+.tipo-tarjeta-icon {
+  font-size: 1.75rem;
+}
+
+.tipo-tarjeta-titulo {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.tipo-tarjeta-desc {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 600px) {
+  .tipo-tarjeta-selector {
+    grid-template-columns: 1fr;
+  }
+}

@@ -388,3 +388,68 @@ input[type="number"] {
     grid-template-columns: repeat(5, 1fr);
   }
 }
+
+/* ============================================
+   v0.10.3 — Menú "Nueva" con opciones
+   ============================================ */
+
+.nueva-opciones-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: var(--space-md);
+}
+
+.nueva-opcion-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+}
+
+.nueva-opcion-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(20, 240, 205, 0.1);
+}
+
+.nueva-opcion-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.nueva-opcion-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.nueva-opcion-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.nueva-opcion-desc {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 600px) {
+  .nueva-opciones-grid {
+    grid-template-columns: 1fr;
+  }
+}

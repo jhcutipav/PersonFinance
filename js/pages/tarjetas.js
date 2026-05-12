@@ -14,31 +14,65 @@ const Tarjetas = {
     if (container) this.render(container, this.monedaVista);
   },
   
+  /**
+   * v0.10.2 — Color de semáforo según porcentaje de uso de la tarjeta
+   * <30% verde · 30-70% amarillo · >70% rojo
+   */
+  colorPorUso(porcentaje) {
+    if (porcentaje >= 70) return { color: '#EF4444', mensaje: 'Peligro' };
+    if (porcentaje >= 30) return { color: '#F59E0B', mensaje: 'Alerta' };
+    return { color: '#10B981', mensaje: 'Normal' };
+  },
+  
+  // v0.10.3 — Tab activo (crédito o débito)
+  tabActivo: 'credito',
+  
   /* ============================================
      PÁGINA TARJETAS
-     v0.10.1 — Cambios:
-     - Layout 2 columnas: slider izquierda + resumen derecha
-     - Resumen con barra de uso, gráfico de evolución
+     v0.10.3 — Cambios:
+     - Tabs Crédito / Débito separados
      ============================================ */
   render(container, monedaVista = 'PEN') {
     this.monedaVista = monedaVista;
     Graficos.destruirTodos();
     
-    const tarjetas = API.obtenerTarjetas();
+    // Obtener tarjetas filtradas según tab activo
+    const todasTarjetas = API.obtenerTarjetas();
+    const tarjetasCredito = todasTarjetas.filter(t => !t.tipoTarjeta || t.tipoTarjeta === 'credito');
+    const tarjetasDebito = todasTarjetas.filter(t => t.tipoTarjeta === 'debito');
+    const tarjetas = this.tabActivo === 'credito' ? tarjetasCredito : tarjetasDebito;
     
-    if (tarjetas.length === 0) {
-      container.innerHTML = this.renderEmptyState();
-      this.configurarEventosEmpty();
+    // Si el tab está vacío pero el otro tiene tarjetas, cambiar
+    if (tarjetas.length === 0 && this.tabActivo === 'credito' && tarjetasDebito.length > 0) {
+      this.tabActivo = 'debito';
+      this.render(container, monedaVista);
       return;
     }
     
-    // Si no hay tarjeta seleccionada, tomar la primera
+    // Renderizar tabs siempre que haya AL MENOS una tarjeta
+    const renderTabs = todasTarjetas.length > 0;
+    
+    if (tarjetas.length === 0) {
+      container.innerHTML = `
+        ${renderTabs ? this.renderTabsCreditoDebito(tarjetasCredito.length, tarjetasDebito.length) : ''}
+        ${this.renderEmptyState()}
+      `;
+      this.configurarEventosEmpty();
+      this.configurarTabsEvento();
+      return;
+    }
+    
+    // Si no hay tarjeta seleccionada o no es del tab actual, tomar la primera del tab
     if (!this.tarjetaSeleccionadaId || !tarjetas.find(t => t.id === this.tarjetaSeleccionadaId)) {
       this.tarjetaSeleccionadaId = tarjetas[0].id;
     }
     
     container.innerHTML = `
       <div class="tarjetas-page">
+        
+        <!-- Tabs Crédito / Débito -->
+        ${this.renderTabsCreditoDebito(tarjetasCredito.length, tarjetasDebito.length)}
+        
         <!-- Layout 2 columnas: slider + resumen -->
         <div class="tarjetas-page-top">
           <div class="tarjetas-resumen-col" id="tarjetasResumenCol">
@@ -58,10 +92,56 @@ const Tarjetas = {
     `;
     
     this.configurarEventos();
+    this.configurarTabsEvento();
     
     setTimeout(() => {
       this.renderChartUsoTarjeta();
     }, 50);
+  },
+  
+  /**
+   * v0.10.3 — Renderiza los tabs Crédito / Débito
+   */
+  renderTabsCreditoDebito(numCredito, numDebito) {
+    return `
+      <div class="tarjetas-tabs">
+        <button class="tarjetas-tab ${this.tabActivo === 'credito' ? 'active' : ''}" data-tab="credito">
+          <span class="tarjetas-tab-icon">💳</span>
+          <span>Tarjetas de crédito</span>
+          <span class="tarjetas-tab-count">${numCredito}</span>
+        </button>
+        <button class="tarjetas-tab ${this.tabActivo === 'debito' ? 'active' : ''}" data-tab="debito">
+          <span class="tarjetas-tab-icon">🏧</span>
+          <span>Tarjetas de débito</span>
+          <span class="tarjetas-tab-count">${numDebito}</span>
+        </button>
+        <button class="btn-primary tarjetas-tab-nueva" id="btnAgregarTarjetaTab" style="margin-left:auto;">
+          + Nueva tarjeta
+        </button>
+      </div>
+    `;
+  },
+  
+  /**
+   * v0.10.3 — Listener de los tabs
+   */
+  configurarTabsEvento() {
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        if (tab === this.tabActivo) return;
+        this.tabActivo = tab;
+        this.tarjetaSeleccionadaId = null; // forzar primera del nuevo tab
+        this.refrescar();
+      });
+    });
+    
+    const btnNueva = document.getElementById('btnAgregarTarjetaTab');
+    if (btnNueva) {
+      btnNueva.addEventListener('click', () => {
+        TarjetaForm.abrir(null, () => this.refrescar(), this.tabActivo);
+      });
+    }
   },
   
   /**
@@ -129,17 +209,25 @@ const Tarjetas = {
           </div>
         </div>
         
-        <!-- Barra de uso -->
-        <div class="resumen-side-progress">
-          <div class="resumen-side-progress-label">
-            <span>Uso de línea de crédito</span>
-            <strong>${pctUsado.toFixed(1)}%</strong>
+        <!-- Barra de uso con SEMÁFORO (v0.10.2) -->
+        ${(() => {
+          const sem = this.colorPorUso(pctUsado);
+          return `
+          <div class="resumen-side-progress">
+            <div class="resumen-side-progress-label">
+              <span>Uso de línea de crédito</span>
+              <span style="display:flex;align-items:center;gap:6px;">
+                <span class="estado-badge" style="background:${sem.color}22;color:${sem.color};border:1px solid ${sem.color}44;">${sem.mensaje}</span>
+                <strong style="color:${sem.color};">${pctUsado.toFixed(1)}%</strong>
+              </span>
+            </div>
+            <div class="resumen-side-progress-bar">
+              <div class="resumen-side-progress-fill" 
+                   style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${sem.color},${sem.color}cc);"></div>
+            </div>
           </div>
-          <div class="resumen-side-progress-bar">
-            <div class="resumen-side-progress-fill" 
-                 style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${colorHex},${colorHex}cc);"></div>
-          </div>
-        </div>
+          `;
+        })()}
         
         <!-- Extra: consumo y próximo pago -->
         <div class="resumen-side-extra">
@@ -206,11 +294,11 @@ const Tarjetas = {
           <div class="resumen-side-desc">📝 Uso de la tarjeta del mes anterior</div>
         ` : ''}
         
-        <!-- Acciones -->
+        <!-- Acciones (v0.10.3 — IDs únicos para no chocar con mes actual) -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-primary" id="btnPagarTarjeta" style="flex:1;justify-content:center;font-size:0.8125rem;">💵 Pagar</button>
-          <button class="btn-secondary" id="btnEditarTarjeta" style="font-size:0.8125rem;">⚙️</button>
-          <button class="btn-secondary" id="btnNuevoConsumo" style="font-size:0.8125rem;">+</button>
+          <button class="btn-primary" id="btnPagarTarjetaMesAnt" style="flex:1;justify-content:center;font-size:0.8125rem;">💵 Pagar</button>
+          <button class="btn-secondary" id="btnEditarTarjetaMesAnt" style="font-size:0.8125rem;">⚙️</button>
+          <button class="btn-secondary" id="btnNuevoConsumoMesAnt" style="font-size:0.8125rem;">+</button>
         </div>
         
         <!-- Stats principales -->
@@ -229,17 +317,25 @@ const Tarjetas = {
           </div>
         </div>
         
-        <!-- Barra de uso -->
-        <div class="resumen-side-progress">
-          <div class="resumen-side-progress-label">
-            <span>Uso de línea de crédito</span>
-            <strong>${pctUsado.toFixed(1)}%</strong>
+        <!-- Barra de uso con SEMÁFORO (v0.10.2) -->
+        ${(() => {
+          const sem = this.colorPorUso(pctUsado);
+          return `
+          <div class="resumen-side-progress">
+            <div class="resumen-side-progress-label">
+              <span>Uso de línea de crédito</span>
+              <span style="display:flex;align-items:center;gap:6px;">
+                <span class="estado-badge" style="background:${sem.color}22;color:${sem.color};border:1px solid ${sem.color}44;">${sem.mensaje}</span>
+                <strong style="color:${sem.color};">${pctUsado.toFixed(1)}%</strong>
+              </span>
+            </div>
+            <div class="resumen-side-progress-bar">
+              <div class="resumen-side-progress-fill" 
+                   style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${sem.color},${sem.color}cc);"></div>
+            </div>
           </div>
-          <div class="resumen-side-progress-bar">
-            <div class="resumen-side-progress-fill" 
-                 style="width:${Math.min(pctUsado, 100)}%;background:linear-gradient(90deg,${colorHex},${colorHex}cc);"></div>
-          </div>
-        </div>
+          `;
+        })()}
         
         <!-- Extra: consumo y próximo pago -->
         <div class="resumen-side-extra">
@@ -710,6 +806,38 @@ const Tarjetas = {
         const tarjeta = API.obtenerTarjetaPorId(this.tarjetaSeleccionadaId);
         TransaccionForm.abrir(null, () => this.refrescar());
         // Esperar a que se abra el modal y preseleccionar la cuenta
+        setTimeout(() => {
+          const select = document.getElementById('transCuenta');
+          if (select && tarjeta) {
+            select.value = tarjeta.cuentaId;
+            select.dispatchEvent(new Event('change'));
+            TransaccionForm.estado.tipo = 'egreso';
+            TransaccionForm.refrescarForm();
+          }
+        }, 100);
+      });
+    }
+    
+    // v0.10.3 — Botones del resumen del MES ANTERIOR
+    const btnPagarMA = document.getElementById('btnPagarTarjetaMesAnt');
+    if (btnPagarMA) {
+      btnPagarMA.addEventListener('click', () => {
+        PagoTarjetaForm.abrir(this.tarjetaSeleccionadaId, () => this.refrescar());
+      });
+    }
+    
+    const btnEditarMA = document.getElementById('btnEditarTarjetaMesAnt');
+    if (btnEditarMA) {
+      btnEditarMA.addEventListener('click', () => {
+        TarjetaForm.abrir(this.tarjetaSeleccionadaId, () => this.refrescar());
+      });
+    }
+    
+    const btnConsumoMA = document.getElementById('btnNuevoConsumoMesAnt');
+    if (btnConsumoMA) {
+      btnConsumoMA.addEventListener('click', () => {
+        const tarjeta = API.obtenerTarjetaPorId(this.tarjetaSeleccionadaId);
+        TransaccionForm.abrir(null, () => this.refrescar());
         setTimeout(() => {
           const select = document.getElementById('transCuenta');
           if (select && tarjeta) {

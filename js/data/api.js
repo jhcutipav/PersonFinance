@@ -43,9 +43,42 @@ const API = {
     return Storage.cargar('tarjetas') || [];
   },
   
+  /**
+   * v0.10.3 — Tarjetas filtradas por tipo (crédito o débito)
+   */
+  obtenerTarjetasCredito() {
+    return this.obtenerTarjetas().filter(t => !t.tipoTarjeta || t.tipoTarjeta === 'credito');
+  },
+  
+  obtenerTarjetasDebito() {
+    return this.obtenerTarjetas().filter(t => t.tipoTarjeta === 'debito');
+  },
+  
   obtenerTarjetaPorId(id) {
     const tarjetas = this.obtenerTarjetas();
     return tarjetas.find(t => t.id === id);
+  },
+  
+  /**
+   * v0.10.3 — Marcar una cuenta como principal (desmarca las demás)
+   */
+  marcarCuentaPrincipal(cuentaId) {
+    const cuentas = Storage.cargar('cuentas') || [];
+    cuentas.forEach(c => {
+      c.esPrincipal = (c.id === cuentaId);
+    });
+    Storage.guardar('cuentas', cuentas);
+  },
+  
+  /**
+   * v0.10.3 — Obtener la cuenta principal (o la primera de débito si no hay)
+   */
+  obtenerCuentaPrincipal() {
+    const cuentas = this.obtenerCuentas();
+    return cuentas.find(c => c.esPrincipal) 
+      || cuentas.find(c => c.tipo === 'debito')
+      || cuentas[0]
+      || null;
   },
   
   /**
@@ -274,6 +307,9 @@ const API = {
           nueva.cuotaActual = 1;
         }
       }
+    } else if (datos.tarjetaId) {
+      // v0.10.4 — tarjetaId explícito (gasto fijo / cuota deuda pagada con tarjeta)
+      nueva.tarjetaId = datos.tarjetaId;
     }
     
     transacciones.push(nueva);
@@ -544,6 +580,63 @@ const API = {
   },
   
   /**
+   * v0.10.2 — Egresos del mes pagados con cuentas de DÉBITO
+   */
+  calcularEgresosDebitoMes(monedaDestino = 'PEN') {
+    const ahora = new Date();
+    const trans = this.obtenerTransacciones({
+      tipo: 'egreso',
+      mes: ahora.getMonth() + 1,
+      anio: ahora.getFullYear(),
+    }).filter(t => {
+      if (t.tarjetaId) return false;
+      const cuenta = this.obtenerCuentaPorId(t.cuentaId);
+      return cuenta && cuenta.tipo === 'debito';
+    });
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  /**
+   * v0.10.2 — Egresos del mes pagados en EFECTIVO
+   */
+  calcularEgresosEfectivoMes(monedaDestino = 'PEN') {
+    const ahora = new Date();
+    const trans = this.obtenerTransacciones({
+      tipo: 'egreso',
+      mes: ahora.getMonth() + 1,
+      anio: ahora.getFullYear(),
+    }).filter(t => {
+      if (t.tarjetaId) return false;
+      const cuenta = this.obtenerCuentaPorId(t.cuentaId);
+      return cuenta && cuenta.tipo === 'efectivo';
+    });
+    return Formato.sumarEnMoneda(trans, monedaDestino);
+  },
+  
+  /**
+   * v0.10.2 — Patrimonio de crédito: suma de líneas totales y uso global
+   * estado: 'normal' (<30%), 'alerta' (30-70%), 'peligro' (>70%)
+   */
+  calcularPatrimonioCredito(monedaDestino = 'PEN') {
+    const tarjetas = this.obtenerTarjetas();
+    let lineaTotal = 0, usado = 0;
+    
+    tarjetas.forEach(t => {
+      lineaTotal += Formato.convertir(t.lineaCredito || 0, t.moneda, monedaDestino);
+      usado += Formato.convertir(t.saldoUsado || 0, t.moneda, monedaDestino);
+    });
+    
+    const disponible = lineaTotal - usado;
+    const porcentaje = lineaTotal > 0 ? (usado / lineaTotal) * 100 : 0;
+    
+    let estado = 'normal', mensaje = 'Normal', color = '#10B981';
+    if (porcentaje >= 70) { estado = 'peligro'; mensaje = 'Peligro'; color = '#EF4444'; }
+    else if (porcentaje >= 30) { estado = 'alerta'; mensaje = 'Alerta'; color = '#F59E0B'; }
+    
+    return { lineaTotal, usado, disponible, porcentaje, estado, mensaje, color };
+  },
+  
+  /**
    * Total de dinero movido en transferencias durante el mes actual
    */
   calcularTransferenciasMes(monedaDestino = 'PEN') {
@@ -572,25 +665,37 @@ const API = {
    * Crea una nueva tarjeta. También crea la "cuenta" asociada.
    */
   crearTarjeta(datos) {
-    // 1. Crear la cuenta asociada
-    const cuentas = Storage.cargar('cuentas') || [];
-    const nuevaCuentaId = Storage.nuevoId('cuentas');
-    const nuevaCuenta = {
-      id: nuevaCuentaId,
-      nombre: datos.nombre,
-      tipo: 'credito',
-      moneda: datos.moneda,
-      saldo: 0,
-      activo: true,
-    };
-    cuentas.push(nuevaCuenta);
-    Storage.guardar('cuentas', cuentas);
+    // v0.10.3 — Tarjetas débito NO crean cuenta nueva; usan una existente
+    const esDebito = datos.tipoTarjeta === 'debito';
+    let cuentaIdVinculada;
     
-    // 2. Crear la tarjeta
+    if (esDebito) {
+      // Para débito, usa la cuenta vinculada existente
+      cuentaIdVinculada = datos.cuentaVinculadaId;
+      const cuentaVinc = this.obtenerCuentaPorId(cuentaIdVinculada);
+      if (!cuentaVinc) throw new Error('Cuenta vinculada no encontrada');
+    } else {
+      // Para crédito, crea cuenta tipo "credito" interna
+      const cuentas = Storage.cargar('cuentas') || [];
+      cuentaIdVinculada = Storage.nuevoId('cuentas');
+      cuentas.push({
+        id: cuentaIdVinculada,
+        nombre: datos.nombre,
+        tipo: 'credito',
+        moneda: datos.moneda,
+        saldo: 0,
+        activo: true,
+      });
+      Storage.guardar('cuentas', cuentas);
+    }
+    
+    // Crear la tarjeta
     const tarjetas = Storage.cargar('tarjetas') || [];
     const nueva = {
       id: Storage.nuevoId('tarjetas'),
-      cuentaId: nuevaCuentaId,
+      tipoTarjeta: esDebito ? 'debito' : 'credito',  // v0.10.3
+      cuentaId: cuentaIdVinculada,
+      cuentaVinculadaId: esDebito ? cuentaIdVinculada : null,
       nombre: datos.nombre,
       banco: datos.banco || datos.nombre.split(' ')[0].toUpperCase(),
       titular: datos.titular || API.obtenerUsuario().nombre,
@@ -598,11 +703,11 @@ const API = {
       fechaExpiracion: datos.fechaExpiracion || '12/28',
       marca: datos.marca || 'VISA',
       moneda: datos.moneda,
-      lineaCredito: parseFloat(datos.lineaCredito),
+      lineaCredito: esDebito ? 0 : parseFloat(datos.lineaCredito),
       saldoUsado: 0,
-      diaCorte: parseInt(datos.diaCorte),
-      diaPago: parseInt(datos.diaPago),
-      tasaTEA: parseFloat(datos.tasaTEA) || 0.85,
+      diaCorte: esDebito ? null : parseInt(datos.diaCorte),
+      diaPago: esDebito ? null : parseInt(datos.diaPago),
+      tasaTEA: esDebito ? 0 : (parseFloat(datos.tasaTEA) || 0.85),
       colorTema: datos.colorTema || 'purple',
       descripcion: datos.descripcion || '',
     };
@@ -620,12 +725,15 @@ const API = {
     const idx = tarjetas.findIndex(t => t.id === id);
     if (idx === -1) return null;
     
+    const esDebito = datos.tipoTarjeta === 'debito';
+    
     tarjetas[idx] = { 
       ...tarjetas[idx], 
       ...datos,
-      lineaCredito: parseFloat(datos.lineaCredito || tarjetas[idx].lineaCredito),
-      diaCorte: parseInt(datos.diaCorte || tarjetas[idx].diaCorte),
-      diaPago: parseInt(datos.diaPago || tarjetas[idx].diaPago),
+      tipoTarjeta: datos.tipoTarjeta || tarjetas[idx].tipoTarjeta || 'credito',
+      lineaCredito: esDebito ? 0 : parseFloat(datos.lineaCredito || tarjetas[idx].lineaCredito),
+      diaCorte: esDebito ? null : parseInt(datos.diaCorte || tarjetas[idx].diaCorte),
+      diaPago: esDebito ? null : parseInt(datos.diaPago || tarjetas[idx].diaPago),
     };
     Storage.guardar('tarjetas', tarjetas);
     
@@ -813,14 +921,28 @@ const API = {
     const monto = parseFloat(datos.monto || gasto.monto);
     const fecha = datos.fecha || new Date().toISOString().split('T')[0];
     
+    // v0.10.4 — Si se pasa una tarjeta de crédito, el "egreso" es con tarjeta
+    let cuentaPagoId, tarjetaId;
+    if (datos.tarjetaId) {
+      // Pago con tarjeta de crédito
+      tarjetaId = datos.tarjetaId;
+      const tarjeta = this.obtenerTarjetaPorId(tarjetaId);
+      if (!tarjeta) throw new Error('Tarjeta no encontrada');
+      cuentaPagoId = tarjeta.cuentaId; // La cuenta interna de la tarjeta
+    } else {
+      // Pago con cuenta de débito/efectivo (o la cuenta original si no se especifica)
+      cuentaPagoId = datos.cuentaPagoId || gasto.cuentaId;
+    }
+    
     // 1. Crear transacción
     const nuevaTrans = this.crearTransaccion({
-      cuentaId: gasto.cuentaId,
+      cuentaId: cuentaPagoId,
       categoriaId: gasto.categoriaId,
       tipo: 'egreso',
       monto: monto,
       descripcion: gasto.nombre,
       fecha: fecha,
+      tarjetaId: tarjetaId || null, // v0.10.4 — marca pago con tarjeta
     });
     
     // 2. Agregar al histórico
@@ -833,8 +955,9 @@ const API = {
         monto,
         pagado: true,
         transaccionId: nuevaTrans.id,
+        cuentaPagoId: cuentaPagoId,
+        tarjetaId: tarjetaId || null,
       });
-      // Limitar histórico a últimos 12
       if (gastos[idx].historico.length > 12) {
         gastos[idx].historico = gastos[idx].historico.slice(-12);
       }
@@ -973,17 +1096,28 @@ const API = {
     const monto = parseFloat(datos.monto || cuota.cuota);
     const fecha = datos.fecha || new Date().toISOString().split('T')[0];
     
-    // Crear transacción
+    // v0.10.4 — Determinar de dónde sale el pago
+    let cuentaPagoId, tarjetaId;
+    if (datos.tarjetaId) {
+      tarjetaId = datos.tarjetaId;
+      const tarjeta = this.obtenerTarjetaPorId(tarjetaId);
+      if (!tarjeta) throw new Error('Tarjeta no encontrada');
+      cuentaPagoId = tarjeta.cuentaId;
+    } else {
+      cuentaPagoId = datos.cuentaPagoId || deuda.cuentaPagoId;
+    }
+    
+    // Crear transacción (afecta saldo y queda en historial)
     this.crearTransaccion({
-      cuentaId: deuda.cuentaPagoId,
+      cuentaId: cuentaPagoId,
       categoriaId: deuda.categoriaId || 8,
       tipo: 'egreso',
       monto: monto,
       descripcion: `Cuota ${cuotaIndex + 1}/${deuda.plazoMeses} - ${deuda.nombre}`,
       fecha: fecha,
+      tarjetaId: tarjetaId || null,
     });
     
-    // Incrementar cuotasPagadas
     return this.actualizarDeuda(deudaId, { cuotasPagadas: deuda.cuotasPagadas + 1 });
   },
   

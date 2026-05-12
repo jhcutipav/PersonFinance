@@ -5,7 +5,7 @@
 const Deudas = {
   
   monedaVista: 'PEN',
-  tabActiva: 'simulador', // simulador | misdeudas
+  tabActiva: 'misdeudas', // v0.10.4 — Mis deudas primero por defecto
   
   // Estado del simulador
   simulador: {
@@ -42,14 +42,15 @@ const Deudas = {
   },
   
   /* ============ TABS ============ */
+  /* v0.10.4 — "Mis deudas" PRIMERO, "Simulador" SEGUNDO */
   renderTabs() {
     return `
       <div class="deudas-main-tabs">
-        <button class="deudas-main-tab ${this.tabActiva === 'simulador' ? 'active' : ''}" data-tab="simulador">
-          🧮 Simulador
-        </button>
         <button class="deudas-main-tab ${this.tabActiva === 'misdeudas' ? 'active' : ''}" data-tab="misdeudas">
           💵 Mis deudas
+        </button>
+        <button class="deudas-main-tab ${this.tabActiva === 'simulador' ? 'active' : ''}" data-tab="simulador">
+          🧮 Simulador
         </button>
       </div>
     `;
@@ -671,29 +672,108 @@ const Deudas = {
   },
   
   /* ============ ACCIONES ============ */
+  /**
+   * v0.10.4 — Pagar cuota: modal para elegir cuenta/tarjeta de pago
+   */
   pagarCuota(deudaId) {
     const deuda = API.obtenerDeudaPorId(deudaId);
     if (!deuda) return;
     
-    const cronograma = Prestamos.generarCronograma(deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema);
+    const cronograma = API.obtenerCronogramaConOverrides ? 
+      API.obtenerCronogramaConOverrides(deuda) :
+      Prestamos.generarCronograma(deuda.capital, deuda.tasaTEA, deuda.plazoMeses, deuda.sistema);
     const cuota = cronograma[deuda.cuotasPagadas];
-    if (!cuota) return;
+    if (!cuota) {
+      Modal.toast('No hay más cuotas por pagar', 'success');
+      return;
+    }
     
-    const cuenta = API.obtenerCuentaPorId(deuda.cuentaPagoId);
+    const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito');
+    const tarjetasCredito = API.obtenerTarjetas().filter(t => !t.tipoTarjeta || t.tipoTarjeta === 'credito');
+    const cuentaDefaultId = deuda.cuentaPagoId;
     
-    Modal.confirmar({
+    Modal.abrir({
       titulo: `Pagar cuota ${deuda.cuotasPagadas + 1}/${deuda.plazoMeses}`,
-      mensaje: `Se registrará un egreso de ${Formato.formatearMoneda(cuota.cuota, deuda.moneda)} desde "${cuenta?.nombre || ''}". ¿Confirmar?`,
-      textoConfirmar: 'Pagar',
-      onConfirmar: () => {
-        try {
-          API.pagarCuotaDeuda(deudaId);
-          Modal.toast(`✓ Cuota ${deuda.cuotasPagadas + 1} pagada`);
-          this.refrescar();
-        } catch (e) {
-          Modal.toast('Error: ' + e.message, 'error');
-        }
-      },
+      ancho: 'small',
+      contenido: `
+        <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:var(--space-md);">
+          Deuda: <strong>${deuda.nombre}</strong>
+        </p>
+        
+        <div class="form-group">
+          <label class="form-label">Monto de la cuota</label>
+          <div class="trans-modal-amount" style="margin:0;">
+            <input type="number" id="cuotaMontoFinal" class="trans-modal-amount-input"
+                   value="${cuota.cuota.toFixed(2)}" step="0.01" min="0" inputmode="decimal">
+            <div class="trans-modal-amount-currency">${Formato.SIMBOLOS[deuda.moneda]}</div>
+          </div>
+          <div class="form-helper">
+            Capital: ${Formato.formatearMoneda(cuota.amortizacion, deuda.moneda)} · 
+            Interés: ${Formato.formatearMoneda(cuota.interes, deuda.moneda)}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Pagar desde</label>
+          <select class="form-select" id="cuotaOrigen">
+            ${cuentas.length > 0 ? `
+              <optgroup label="💵 Cuentas bancarias / efectivo">
+                ${cuentas.map(c => `
+                  <option value="cuenta_${c.id}" ${c.id === cuentaDefaultId ? 'selected' : ''}>
+                    ${c.icono || '🏦'} ${c.nombre} (${Formato.formatearMoneda(c.saldo, c.moneda)})
+                  </option>
+                `).join('')}
+              </optgroup>
+            ` : ''}
+            ${tarjetasCredito.length > 0 ? `
+              <optgroup label="💳 Tarjetas de crédito">
+                ${tarjetasCredito.map(t => {
+                  const disp = t.lineaCredito - t.saldoUsado;
+                  return `<option value="tarjeta_${t.id}">💳 ${t.nombre} (disp: ${Formato.formatearMoneda(disp, t.moneda)})</option>`;
+                }).join('')}
+              </optgroup>
+            ` : ''}
+          </select>
+          <div class="form-helper">Quedará registrado en el historial de esa cuenta/tarjeta</div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Fecha de pago</label>
+          <input type="date" class="form-input" id="cuotaFechaPago" 
+                 value="${new Date().toISOString().split('T')[0]}">
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
+          <button type="button" class="btn-primary" id="confirmPagoCuota">Registrar pago</button>
+        </div>
+      `,
+    });
+    
+    document.getElementById('confirmPagoCuota').addEventListener('click', () => {
+      const monto = parseFloat(document.getElementById('cuotaMontoFinal').value);
+      if (!monto || monto <= 0) {
+        Modal.toast('Monto inválido', 'error');
+        return;
+      }
+      
+      const origenValue = document.getElementById('cuotaOrigen').value;
+      const [origenTipo, origenId] = origenValue.split('_');
+      const fecha = document.getElementById('cuotaFechaPago').value;
+      
+      try {
+        API.pagarCuotaDeuda(deudaId, {
+          monto: monto,
+          fecha: fecha,
+          cuentaPagoId: origenTipo === 'cuenta' ? parseInt(origenId) : null,
+          tarjetaId: origenTipo === 'tarjeta' ? parseInt(origenId) : null,
+        });
+        Modal.toast(`✓ Cuota ${deuda.cuotasPagadas + 1} pagada`);
+        Modal.cerrar();
+        this.refrescar();
+      } catch (e) {
+        Modal.toast('Error: ' + e.message, 'error');
+      }
     });
   },
   

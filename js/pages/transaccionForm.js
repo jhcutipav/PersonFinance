@@ -171,7 +171,7 @@ const TransaccionForm = {
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Fecha</label>
-            <input type="date" class="form-input" id="transFecha" value="${this.estado.fecha}" max="${new Date().toISOString().split('T')[0]}">
+            <input type="date" class="form-input" id="transFecha" value="${this.estado.fecha}">
           </div>
           <div class="form-group">
             <label class="form-label">Descripción</label>

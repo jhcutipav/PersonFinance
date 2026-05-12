@@ -1,17 +1,21 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
-   v0.10.1 — Cambios:
-   - Stats reorganizados en una sola fila (5 cards)
-   - Slider de tarjetas movido debajo de los stats
-   - Nuevo resumen lateral derecho con detalles de tarjeta
-   - Mini-gráfico de evolución de uso (30 días)
-   - Mismo layout aplicado a página de tarjetas
+   v0.10.4 — Cambios (Fase 3 - última de interfaz):
+   - Tabla "Recent Activity" estilo profesional en dashboard
+     (10 últimas + Ver más → página transacciones)
+   - Página de transacciones con misma tabla + paginación (25/pág)
+   - Columnas completas: Fecha, Descripción, Categoría (padre+sub),
+     Tipo, Monto, Cuenta/Tarjeta, Estado, ⋮
+   - Indicador 📝 cuando la transacción tiene notas
+   - Gastos fijos: modal de pago permite elegir cuenta/tarjeta de origen
+   - Deudas: "Mis deudas" primero, "Simulador" segundo
+   - Pago de cuota: elegir cuenta o tarjeta + fecha + monto editable
    ============================================ */
 
-const APP_VERSION = '0.10.1';
+const APP_VERSION = '0.10.4';
 const APP_NAME = 'FinanzApp';
-const APP_BUILD = '2026-05-11';
+const APP_BUILD = '2026-05-12';
 
 const App = {
   
@@ -215,13 +219,165 @@ const App = {
     });
   },
   
+  /**
+   * v0.10.3 — Botón "Nueva" ahora abre menú de opciones
+   */
   configurarBotonNueva() {
     const btn = document.getElementById('btnNuevaTransaccion');
     if (btn) {
       btn.addEventListener('click', () => {
-        TransaccionForm.abrir(null, () => this.cargarPaginaActual());
+        this.abrirMenuNueva();
       });
     }
+  },
+  
+  /**
+   * v0.10.3 — Menú con opciones rápidas al hacer click en "+ Nueva"
+   */
+  abrirMenuNueva() {
+    Modal.abrir({
+      titulo: '¿Qué deseas crear?',
+      ancho: 'small',
+      contenido: `
+        <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:var(--space-md);">
+          Elige el tipo de operación que quieres registrar:
+        </p>
+        
+        <div class="nueva-opciones-grid">
+          
+          <button class="nueva-opcion-card" id="opcionIngreso">
+            <div class="nueva-opcion-icon" style="background:linear-gradient(135deg,#10B981,#059669);color:white;">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/></svg>
+            </div>
+            <div class="nueva-opcion-info">
+              <div class="nueva-opcion-title">Ingreso</div>
+              <div class="nueva-opcion-desc">Sueldo, ventas, etc.</div>
+            </div>
+          </button>
+          
+          <button class="nueva-opcion-card" id="opcionEgreso">
+            <div class="nueva-opcion-icon" style="background:linear-gradient(135deg,#EF4444,#DC2626);color:white;">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+            </div>
+            <div class="nueva-opcion-info">
+              <div class="nueva-opcion-title">Egreso</div>
+              <div class="nueva-opcion-desc">Gasto, compra, pago</div>
+            </div>
+          </button>
+          
+          <button class="nueva-opcion-card" id="opcionTransferencia">
+            <div class="nueva-opcion-icon" style="background:linear-gradient(135deg,#14F0CD,#06B6D4);color:#0A0E1A;">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            </div>
+            <div class="nueva-opcion-info">
+              <div class="nueva-opcion-title">Transferencia</div>
+              <div class="nueva-opcion-desc">Entre tus cuentas</div>
+            </div>
+          </button>
+          
+          <button class="nueva-opcion-card" id="opcionPagoTarjeta">
+            <div class="nueva-opcion-icon" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:white;">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            </div>
+            <div class="nueva-opcion-info">
+              <div class="nueva-opcion-title">Pagar tarjeta</div>
+              <div class="nueva-opcion-desc">Adelantar / cancelar</div>
+            </div>
+          </button>
+          
+        </div>
+      `,
+    });
+    
+    // Listeners
+    document.getElementById('opcionIngreso').addEventListener('click', () => {
+      Modal.cerrar();
+      setTimeout(() => {
+        TransaccionForm.abrir(null, () => this.cargarPaginaActual());
+        // Pre-seleccionar tipo ingreso después de abrir
+        setTimeout(() => {
+          const btnIng = document.querySelector('[data-tipo="ingreso"]');
+          if (btnIng) btnIng.click();
+        }, 100);
+      }, 250);
+    });
+    
+    document.getElementById('opcionEgreso').addEventListener('click', () => {
+      Modal.cerrar();
+      setTimeout(() => {
+        TransaccionForm.abrir(null, () => this.cargarPaginaActual());
+      }, 250);
+    });
+    
+    document.getElementById('opcionTransferencia').addEventListener('click', () => {
+      Modal.cerrar();
+      setTimeout(() => {
+        if (typeof Transferencias !== 'undefined' && Transferencias.abrirFormulario) {
+          // El form de transferencia abre modal por sí solo
+          Transferencias.abrirFormulario();
+        } else {
+          this.navegarA('transferencias');
+        }
+      }, 250);
+    });
+    
+    document.getElementById('opcionPagoTarjeta').addEventListener('click', () => {
+      Modal.cerrar();
+      setTimeout(() => {
+        const tarjetas = API.obtenerTarjetas();
+        if (tarjetas.length === 0) {
+          Modal.toast('No tienes tarjetas registradas', 'error');
+          return;
+        }
+        // Si hay solo 1 tarjeta, abrir directamente
+        if (tarjetas.length === 1) {
+          PagoTarjetaForm.abrir(tarjetas[0].id, () => this.cargarPaginaActual());
+        } else {
+          this.elegirTarjetaParaPagar();
+        }
+      }, 250);
+    });
+  },
+  
+  /**
+   * v0.10.3 — Selector de tarjeta cuando hay más de una
+   */
+  elegirTarjetaParaPagar() {
+    const tarjetas = API.obtenerTarjetas();
+    
+    Modal.abrir({
+      titulo: '¿Qué tarjeta vas a pagar?',
+      ancho: 'small',
+      contenido: `
+        <div class="nueva-opciones-grid">
+          ${tarjetas.map(t => {
+            const colorHex = ColorPicker.obtenerHex(t.colorTema || 'purple');
+            const pendiente = t.saldoUsado;
+            return `
+              <button class="nueva-opcion-card" data-tarjeta-id="${t.id}">
+                <div class="nueva-opcion-icon" style="background:${colorHex};color:white;">
+                  💳
+                </div>
+                <div class="nueva-opcion-info">
+                  <div class="nueva-opcion-title">${t.nombre}</div>
+                  <div class="nueva-opcion-desc">Pendiente: ${Formato.formatearMoneda(pendiente, t.moneda)}</div>
+                </div>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `,
+    });
+    
+    document.querySelectorAll('[data-tarjeta-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.dataset.tarjetaId);
+        Modal.cerrar();
+        setTimeout(() => {
+          PagoTarjetaForm.abrir(id, () => this.cargarPaginaActual());
+        }, 250);
+      });
+    });
   },
   
   configurarToggleTema() {
