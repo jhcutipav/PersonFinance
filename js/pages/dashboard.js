@@ -1449,7 +1449,11 @@
               <div class="favorite-icon" style="background: ${colorHex};">${inicial}</div>
               <div style="flex:1;min-width:0;">
                 <div class="favorite-name" title="${c.nombre}">
+<<<<<<< HEAD
                   ${c.nombre.length > 14 ? c.nombre.substring(0, 14) + '...' : c.nombre}
+=======
+                  ${esPrincipal ? '⭐ ' : ''}${c.nombre.length > 14 ? c.nombre.substring(0, 14) + '...' : c.nombre}
+>>>>>>> bf9bda19689ce3afd4c09486808ff9fb7cdbdaa6
                 </div>
                 <div class="favorite-symbol">${tipoLabel} · ${c.moneda}</div>
               </div>
@@ -1573,6 +1577,7 @@
       if (container) this.render(container, this.monedaVista);
     },
     
+<<<<<<< HEAD
     /* v0.10.3 — Marcar cuenta como principal (desmarca las demás) */
     toggleCuentaPrincipal(cuentaId) {
       const cuenta = API.obtenerCuentaPorId(cuentaId);
@@ -1595,6 +1600,8 @@
       if (container) this.render(container, this.monedaVista);
     },
     
+=======
+>>>>>>> bf9bda19689ce3afd4c09486808ff9fb7cdbdaa6
     renderSparklinesFavorites() {
       const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito');
       const ahora = new Date();

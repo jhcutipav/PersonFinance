@@ -24,9 +24,12 @@ const Tarjetas = {
     return { color: '#10B981', mensaje: 'Normal' };
   },
   
+<<<<<<< HEAD
   // v0.10.3 — Tab activo (crédito o débito)
   tabActivo: 'credito',
   
+=======
+>>>>>>> bf9bda19689ce3afd4c09486808ff9fb7cdbdaa6
   /* ============================================
      PÁGINA TARJETAS
      v0.10.3 — Cambios:

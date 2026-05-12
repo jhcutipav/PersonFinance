@@ -1,6 +1,7 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
+<<<<<<< HEAD
    v0.10.4 — Cambios (Fase 3 - última de interfaz):
    - Tabla "Recent Activity" estilo profesional en dashboard
      (10 últimas + Ver más → página transacciones)
@@ -14,6 +15,19 @@
    ============================================ */
 
 const APP_VERSION = '0.10.4';
+=======
+   v0.10.2 — Cambios (Fase 1):
+   - Resumen egresos por origen (crédito/débito/efectivo + slot)
+   - Mi Patrimonio rediseñado: solo línea de crédito con semáforo
+     (verde <30% · amarillo 30-70% · rojo >70%)
+   - Aside derecho: máximo 4 items con botón "Ver más" expandible
+     (cuentas, tarjetas, próximos pagos)
+   - Barras de uso de tarjetas con colores de semáforo
+   - Eliminadas restricciones de fecha (permite cargar histórico)
+   ============================================ */
+
+const APP_VERSION = '0.10.2';
+>>>>>>> bf9bda19689ce3afd4c09486808ff9fb7cdbdaa6
 const APP_NAME = 'FinanzApp';
 const APP_BUILD = '2026-05-12';
 
