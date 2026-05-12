@@ -1,19 +1,17 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
-   v0.10.4 — Cambios (Fase 3 - última de interfaz):
-   - Tabla "Recent Activity" estilo profesional en dashboard
-     (10 últimas + Ver más → página transacciones)
-   - Página de transacciones con misma tabla + paginación (25/pág)
-   - Columnas completas: Fecha, Descripción, Categoría (padre+sub),
-     Tipo, Monto, Cuenta/Tarjeta, Estado, ⋮
-   - Indicador 📝 cuando la transacción tiene notas
-   - Gastos fijos: modal de pago permite elegir cuenta/tarjeta de origen
-   - Deudas: "Mis deudas" primero, "Simulador" segundo
-   - Pago de cuota: elegir cuenta o tarjeta + fecha + monto editable
+   v0.11.0 — Cambios:
+   - Sidebar rediseñado: logo+subtítulo unificados, sin card maleta
+   - Botón toggle más grande y elegante (28px con shadow glow)
+   - Páginas habilitadas: Configuración, Ayuda, Notificaciones
+   - Botón "+ Nueva" abre form directo (no modal de opciones)
+   - Tabs del form: Egreso / Ingreso / Transferir / Pagos
+   - Tab "Pagos" lleva a deudas/gastos/tarjetas/metas según elijas
+   - Tab "Transferir" abre el form de transferencia desde cualquier lugar
    ============================================ */
 
-const APP_VERSION = '0.10.4';
+const APP_VERSION = '0.11.0';
 const APP_NAME = 'FinanzApp';
 const APP_BUILD = '2026-05-12';
 
@@ -50,6 +48,11 @@ const App = {
     if (hash) this.estado.paginaActual = hash;
     this.cargarPaginaActual();
     this.actualizarNavActiva();
+    
+    // v0.11.0 — Refrescar badge de notificaciones
+    if (typeof Notificaciones !== 'undefined') {
+      Notificaciones.refrescarBadge();
+    }
     
     // 5. Re-renderizar al cambiar tema (para los gráficos)
     document.addEventListener('themeChanged', () => {
@@ -175,6 +178,16 @@ const App = {
       case 'transferencias':
         Transferencias.render(container, this.estado.monedaVista);
         break;
+      // v0.11.0 — Nuevas páginas
+      case 'configuracion':
+        Configuracion.render(container, this.estado.monedaVista);
+        break;
+      case 'ayuda':
+        Ayuda.render(container, this.estado.monedaVista);
+        break;
+      case 'notificaciones':
+        Notificaciones.render(container, this.estado.monedaVista);
+        break;
       default:
         container.innerHTML = `
           <div class="glass-card" style="text-align: center; padding: 3rem;">
@@ -220,13 +233,13 @@ const App = {
   },
   
   /**
-   * v0.10.3 — Botón "Nueva" ahora abre menú de opciones
+   * v0.11.0 — Botón "Nueva" abre directamente el form con tabs
    */
   configurarBotonNueva() {
     const btn = document.getElementById('btnNuevaTransaccion');
     if (btn) {
       btn.addEventListener('click', () => {
-        this.abrirMenuNueva();
+        TransaccionForm.abrir(null, () => this.cargarPaginaActual());
       });
     }
   },

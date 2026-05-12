@@ -453,3 +453,124 @@ input[type="number"] {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================
+   v0.11.0 — Tabs de transacción con 4 opciones
+   + UI especial para Pagos
+   ============================================ */
+
+.type-selector.type-selector-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.type-option.pago.active {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.05));
+  border-color: #8B5CF6;
+  color: #8B5CF6;
+}
+
+.pagos-intro {
+  text-align: center;
+  margin: var(--space-md) 0;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+
+.pagos-opciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: var(--space-md);
+}
+
+.pago-opcion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--card-bg-secondary);
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+}
+
+.pago-opcion:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.pago-opcion.active {
+  border-color: var(--accent-primary);
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.08), transparent);
+  box-shadow: 0 0 0 3px rgba(20, 240, 205, 0.1);
+}
+
+.pago-opcion-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  color: white;
+}
+
+.pago-opcion-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.pago-opcion-desc {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+.pagos-hint {
+  margin: var(--space-md) 0;
+}
+
+.pagos-info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.06), transparent);
+  border: 1px solid rgba(20, 240, 205, 0.25);
+  border-radius: var(--radius-md);
+}
+
+.pagos-info-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.pagos-info-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.pagos-info-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .type-selector.type-selector-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pagos-opciones {
+    grid-template-columns: 1fr;
+  }
+}

@@ -131,20 +131,33 @@ const TransaccionForm = {
     return `
       <form id="transForm" onsubmit="return false;">
         
-        <!-- Selector de tipo -->
-        <div class="type-selector">
+        <!-- Selector de tipo (v0.11.0 — 4 tabs) -->
+        <div class="type-selector type-selector-4">
           <button type="button" class="type-option ${this.estado.tipo === 'egreso' ? 'active expense' : ''}" data-tipo="egreso">
             ↓ Egreso
           </button>
           <button type="button" class="type-option ${this.estado.tipo === 'ingreso' ? 'active income' : ''}" data-tipo="ingreso">
             ↑ Ingreso
           </button>
-          <button type="button" class="type-option ${this.estado.tipo === 'transferencia' ? 'active transfer' : ''}" data-tipo="transferencia" disabled style="opacity:0.4;cursor:not-allowed;" title="Próximamente">
+          <button type="button" class="type-option ${this.estado.tipo === 'transferencia' ? 'active transfer' : ''}" data-tipo="transferencia">
             ⇄ Transferir
+          </button>
+          <button type="button" class="type-option ${this.estado.tipo === 'pago' ? 'active pago' : ''}" data-tipo="pago">
+            💳 Pagos
           </button>
         </div>
         
-        <!-- Monto destacado -->
+        <!-- v0.11.0 — Si tipo === 'pago', mostrar UI especial -->
+        ${this.estado.tipo === 'pago' ? this.renderPagosUI() : this.renderTransaccionUI()}
+      </form>
+    `;
+  },
+  
+  /**
+   * v0.11.0 — UI normal de transacción (egreso/ingreso/transferencia)
+   */
+  renderTransaccionUI() {
+    return `
         <div class="trans-modal-amount" style="margin-top: var(--space-lg);">
           <input type="number" 
                  id="transMonto" 
@@ -222,7 +235,116 @@ const TransaccionForm = {
           <button type="button" class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
           <button type="button" class="btn-primary" id="btnGuardar">${this.estado.id ? 'Guardar cambios' : 'Crear transacción'}</button>
         </div>
-      </form>
+    `;
+  },
+  
+  /**
+   * v0.11.0 — UI especial para tab "Pagos"
+   * Permite elegir qué pagar: cuota deuda, gasto fijo, tarjeta crédito, aporte meta
+   */
+  renderPagosUI() {
+    this.pagoSubtipo = this.pagoSubtipo || null;
+    
+    return `
+      <div class="pagos-intro">
+        <p>¿Qué quieres pagar?</p>
+      </div>
+      
+      <div class="pagos-opciones">
+        <button type="button" class="pago-opcion ${this.pagoSubtipo === 'cuota' ? 'active' : ''}" data-pago="cuota">
+          <div class="pago-opcion-icon" style="background:linear-gradient(135deg,#F59E0B,#EA580C);">💰</div>
+          <div>
+            <div class="pago-opcion-title">Cuota de deuda</div>
+            <div class="pago-opcion-desc">Préstamo, financiamiento</div>
+          </div>
+        </button>
+        
+        <button type="button" class="pago-opcion ${this.pagoSubtipo === 'gasto_fijo' ? 'active' : ''}" data-pago="gasto_fijo">
+          <div class="pago-opcion-icon" style="background:linear-gradient(135deg,#06B6D4,#0EA5E9);">📅</div>
+          <div>
+            <div class="pago-opcion-title">Gasto fijo / Servicio</div>
+            <div class="pago-opcion-desc">Luz, internet, suscripciones</div>
+          </div>
+        </button>
+        
+        <button type="button" class="pago-opcion ${this.pagoSubtipo === 'tarjeta' ? 'active' : ''}" data-pago="tarjeta">
+          <div class="pago-opcion-icon" style="background:linear-gradient(135deg,#8B5CF6,#7C3AED);">💳</div>
+          <div>
+            <div class="pago-opcion-title">Tarjeta de crédito</div>
+            <div class="pago-opcion-desc">Adelantar o pagar saldo</div>
+          </div>
+        </button>
+        
+        <button type="button" class="pago-opcion ${this.pagoSubtipo === 'meta' ? 'active' : ''}" data-pago="meta">
+          <div class="pago-opcion-icon" style="background:linear-gradient(135deg,#14F0CD,#06B6D4);color:#0A0E1A;">🎯</div>
+          <div>
+            <div class="pago-opcion-title">Aporte a meta</div>
+            <div class="pago-opcion-desc">Sumar a tu ahorro</div>
+          </div>
+        </button>
+      </div>
+      
+      <!-- Hint o detalle según seleccionado -->
+      <div class="pagos-hint">
+        ${!this.pagoSubtipo ? `
+          <div style="text-align:center;padding:var(--space-md);color:var(--text-tertiary);font-size:0.875rem;">
+            👆 Selecciona arriba qué deseas pagar
+          </div>
+        ` : `
+          <div class="pagos-redirect-info">
+            ${this.renderInfoPagoSubtipo()}
+          </div>
+        `}
+      </div>
+      
+      <!-- Acciones -->
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="Modal.cerrar()">Cancelar</button>
+        ${this.pagoSubtipo ? `
+          <button type="button" class="btn-primary" id="btnIrAPago">Continuar →</button>
+        ` : ''}
+      </div>
+    `;
+  },
+  
+  /**
+   * v0.11.0 — Info contextual del subtipo de pago seleccionado
+   */
+  renderInfoPagoSubtipo() {
+    const infos = {
+      cuota: {
+        icono: '💰',
+        titulo: 'Pagar cuota de deuda',
+        desc: 'Te llevaremos a la lista de deudas. Selecciona la deuda y elige la cuota a pagar con la cuenta de origen.',
+      },
+      gasto_fijo: {
+        icono: '📅',
+        titulo: 'Pagar gasto fijo',
+        desc: 'Te llevaremos a la lista de gastos fijos. Click en ✓ del que vas a pagar para elegir el monto y cuenta.',
+      },
+      tarjeta: {
+        icono: '💳',
+        titulo: 'Pagar tarjeta de crédito',
+        desc: 'Elige la tarjeta a pagar. Podrás definir monto y cuenta de origen.',
+      },
+      meta: {
+        icono: '🎯',
+        titulo: 'Aportar a una meta',
+        desc: 'Te llevaremos a tus metas. Click en "+ Aportar" de la meta correspondiente.',
+      },
+    };
+    
+    const info = infos[this.pagoSubtipo];
+    if (!info) return '';
+    
+    return `
+      <div class="pagos-info-card">
+        <div class="pagos-info-icon">${info.icono}</div>
+        <div>
+          <div class="pagos-info-title">${info.titulo}</div>
+          <div class="pagos-info-desc">${info.desc}</div>
+        </div>
+      </div>
     `;
   },
   
@@ -305,19 +427,41 @@ const TransaccionForm = {
   },
   
   configurarEventos() {
-    // Tipo
+    // Tipo (siempre presente)
     document.querySelectorAll('.type-option[data-tipo]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.disabled) return;
         this.estado.tipo = btn.dataset.tipo;
         this.estado.categoriaPadreId = null;
         this.estado.categoriaId = null;
+        // v0.11.0 — si cambia a/desde "pago", limpiar pagoSubtipo
+        if (this.estado.tipo !== 'pago') this.pagoSubtipo = null;
         this.refrescarForm();
       });
     });
     
+    // v0.11.0 — Si tipo === 'pago', configurar UI de pagos y salir
+    if (this.estado.tipo === 'pago') {
+      this.configurarEventosPagos();
+      return;
+    }
+    
+    // v0.11.0 — Si tipo === 'transferencia', cerrar este form y abrir el de transferencia
+    if (this.estado.tipo === 'transferencia') {
+      Modal.cerrar();
+      setTimeout(() => {
+        if (typeof Transferencias !== 'undefined' && Transferencias.abrirFormulario) {
+          Transferencias.abrirFormulario();
+        }
+      }, 250);
+      return;
+    }
+    
+    // === Resto del código original (ingreso/egreso) ===
+    
     // Monto
     const inputMonto = document.getElementById('transMonto');
+    if (!inputMonto) return; // no debería pasar, pero por seguridad
     inputMonto.addEventListener('input', (e) => {
       this.estado.monto = e.target.value;
     });
@@ -458,6 +602,37 @@ const TransaccionForm = {
         this.refrescarCategorias();
       });
     });
+  },
+  
+  /**
+   * v0.11.0 — Eventos de la UI de Pagos
+   */
+  configurarEventosPagos() {
+    // Selección de subtipo
+    document.querySelectorAll('[data-pago]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.pagoSubtipo = btn.dataset.pago;
+        this.refrescarForm();
+      });
+    });
+    
+    // Continuar (redirige a la página correspondiente)
+    const btnIr = document.getElementById('btnIrAPago');
+    if (btnIr) {
+      btnIr.addEventListener('click', () => {
+        const rutas = {
+          cuota: 'deudas',
+          gasto_fijo: 'gastos-fijos',
+          tarjeta: 'tarjetas',
+          meta: 'metas',
+        };
+        const ruta = rutas[this.pagoSubtipo];
+        if (ruta) {
+          Modal.cerrar();
+          setTimeout(() => App.navegarA(ruta), 250);
+        }
+      });
+    }
   },
   
   /**
