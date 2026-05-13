@@ -9,8 +9,8 @@
     tabActiva: 'activity', // activity | spending | income
     historyTab: 'history', // history | upcoming
     filtroActividad: 'todas', // 'todas' | 'cuenta_X' | 'tarjeta_X'
-    graficoTipoActivo: 0, // índice del tipo de gráfico (línea, barras, donut, radial)
-    TIPOS_GRAFICO: ['linea', 'barras', 'donut', 'radial'],
+    graficoTipoActivo: 0, // v12 — ampliado a 8 tipos
+    TIPOS_GRAFICO: ['linea', 'barras', 'donut', 'radial', 'pie', 'polar', 'stacked', 'area'],
     autoplayInterval: null,
     AUTOPLAY_MS: 15000,
     
@@ -544,14 +544,21 @@
     /* ============ ACTIVITY CONTENT ============ */
     renderActivityContent() {
       return `
+        <!-- v12 — Layout reorganizado:
+             Fila superior: Activities (izq) + Gráfico+Slider (der)
+             Fila inferior: Tabla Recent activity (ancho completo) -->
         <div class="activity-grid">
           <div class="activity-left">
-            ${this.renderActivityGraph()}
             ${this.renderShortcuts()}
           </div>
           <div class="activity-right">
-            ${this.renderHistory()}
+            ${this.renderActivityGraph()}
           </div>
+        </div>
+        
+        <!-- Recent activity en ancho completo, abajo -->
+        <div class="activity-history-fullwidth">
+          ${this.renderHistory()}
         </div>
       `;
     },
@@ -618,15 +625,18 @@
             </div>
           </div>
           
-          <!-- Slider de tipos de gráfico -->
+          <!-- Título del slider (v12 — flechas movidas a los lados del canvas) -->
           <div class="grafico-slider-wrap" id="graficoSliderWrap">
-            <button class="grafico-slider-arrow grafico-slider-prev" aria-label="Anterior">‹</button>
             <div class="grafico-slider-title" id="graficoTipoLabel">${this.getNombreTipoGrafico()}</div>
-            <button class="grafico-slider-arrow grafico-slider-next" aria-label="Siguiente">›</button>
           </div>
           
-          <div class="activity-graph-canvas">
-            <canvas id="chartActivity"></canvas>
+          <!-- Canvas con flechas a los lados -->
+          <div class="activity-graph-canvas-wrap">
+            <button class="grafico-slider-arrow-side grafico-slider-prev" aria-label="Anterior">‹</button>
+            <div class="activity-graph-canvas">
+              <canvas id="chartActivity"></canvas>
+            </div>
+            <button class="grafico-slider-arrow-side grafico-slider-next" aria-label="Siguiente">›</button>
           </div>
           
           <!-- Dots del slider -->
@@ -651,6 +661,11 @@
         barras: '📊 Barras por día',
         donut: '🍩 Por categorías',
         radial: '🎯 Radar comparativo',
+        // v12 — Nuevos tipos
+        pie: '🥧 Proporción (Pie)',
+        polar: '🌀 Área polar',
+        stacked: '📊 Barras apiladas',
+        area: '📉 Área apilada',
       };
       return map[tipo] || tipo;
     },
@@ -726,10 +741,15 @@
       const tipo = this.TIPOS_GRAFICO[this.graficoTipoActivo];
       
       switch (tipo) {
-        case 'linea':  this.renderChartLinea(canvas); break;
-        case 'barras': this.renderChartBarras(canvas); break;
-        case 'donut':  this.renderChartDonut(canvas); break;
-        case 'radial': this.renderChartRadial(canvas); break;
+        case 'linea':   this.renderChartLinea(canvas); break;
+        case 'barras':  this.renderChartBarras(canvas); break;
+        case 'donut':   this.renderChartDonut(canvas); break;
+        case 'radial':  this.renderChartRadial(canvas); break;
+        // v12 — Nuevos tipos
+        case 'pie':     this.renderChartPie(canvas); break;
+        case 'polar':   this.renderChartPolar(canvas); break;
+        case 'stacked': this.renderChartStacked(canvas); break;
+        case 'area':    this.renderChartArea(canvas); break;
       }
       
       // Actualizar label del slider
@@ -1025,6 +1045,304 @@
     },
     
     /**
+     * v12 — GRÁFICO 5: PIE (proporción simple)
+     * Similar al donut pero sin agujero en el centro
+     */
+    renderChartPie(canvas) {
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const ahora = new Date();
+      
+      const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+      const fechaFin = ahora.toISOString().split('T')[0];
+      let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+      
+      if (this.tabActiva === 'income') trans = trans.filter(t => t.tipo === 'ingreso');
+      else trans = trans.filter(t => t.tipo === 'egreso');
+      
+      // Agrupar por categoría padre
+      const porCategoria = {};
+      trans.forEach(t => {
+        const cat = API.obtenerCategoriaPorId(t.categoriaId);
+        if (!cat) return;
+        const padre = cat.categoriaPadreId ? API.obtenerCategoriaPorId(cat.categoriaPadreId) : cat;
+        if (!padre) return;
+        if (!porCategoria[padre.id]) {
+          porCategoria[padre.id] = { nombre: padre.nombre, icono: padre.icono, total: 0 };
+        }
+        porCategoria[padre.id].total += Formato.convertir(t.monto, t.moneda, moneda);
+      });
+      
+      const categorias = Object.values(porCategoria).sort((a, b) => b.total - a.total).slice(0, 8);
+      
+      if (categorias.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = Theme.coloresGrafico().textSecondary;
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin datos para este filtro', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      
+      const colores = ['#14F0CD', '#06B6D4', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981', '#EC4899', '#3B82F6'];
+      
+      Graficos.instancias['chartActivity'] = new Chart(canvas.getContext('2d'), {
+        type: 'pie',
+        data: {
+          labels: categorias.map(c => `${c.icono} ${c.nombre}`),
+          datasets: [{
+            data: categorias.map(c => c.total),
+            backgroundColor: colores.slice(0, categorias.length),
+            borderWidth: 2,
+            borderColor: Theme.coloresGrafico().cardBg || '#0F172A',
+            hoverOffset: 12,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { color: Theme.coloresGrafico().textSecondary, font: { size: 11 }, padding: 8, boxWidth: 12 },
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const total = ctx.dataset.data.reduce((s, v) => s + v, 0);
+                  const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                  return `${ctx.label}: ${Formato.formatearMoneda(ctx.raw, moneda)} (${pct}%)`;
+                },
+              },
+            },
+          },
+        },
+      });
+    },
+    
+    /**
+     * v12 — GRÁFICO 6: POLAR AREA (rebanadas con misma anchura, distinto radio)
+     * Útil para comparar magnitudes en categorías
+     */
+    renderChartPolar(canvas) {
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const ahora = new Date();
+      
+      const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+      const fechaFin = ahora.toISOString().split('T')[0];
+      let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+      
+      if (this.tabActiva === 'income') trans = trans.filter(t => t.tipo === 'ingreso');
+      else trans = trans.filter(t => t.tipo === 'egreso');
+      
+      const porCategoria = {};
+      trans.forEach(t => {
+        const cat = API.obtenerCategoriaPorId(t.categoriaId);
+        if (!cat) return;
+        const padre = cat.categoriaPadreId ? API.obtenerCategoriaPorId(cat.categoriaPadreId) : cat;
+        if (!padre) return;
+        if (!porCategoria[padre.id]) {
+          porCategoria[padre.id] = { nombre: padre.nombre, icono: padre.icono, total: 0 };
+        }
+        porCategoria[padre.id].total += Formato.convertir(t.monto, t.moneda, moneda);
+      });
+      
+      const categorias = Object.values(porCategoria).sort((a, b) => b.total - a.total).slice(0, 6);
+      
+      if (categorias.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = Theme.coloresGrafico().textSecondary;
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin datos para este filtro', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      
+      const coloresFill = ['rgba(20,240,205,0.7)', 'rgba(6,182,212,0.7)', 'rgba(139,92,246,0.7)', 'rgba(245,158,11,0.7)', 'rgba(239,68,68,0.7)', 'rgba(16,185,129,0.7)'];
+      const coloresBorde = ['#14F0CD', '#06B6D4', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981'];
+      const colorTema = Theme.coloresGrafico();
+      
+      Graficos.instancias['chartActivity'] = new Chart(canvas.getContext('2d'), {
+        type: 'polarArea',
+        data: {
+          labels: categorias.map(c => `${c.icono} ${c.nombre}`),
+          datasets: [{
+            data: categorias.map(c => c.total),
+            backgroundColor: coloresFill.slice(0, categorias.length),
+            borderColor: coloresBorde.slice(0, categorias.length),
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: colorTema.textSecondary, font: { size: 11 }, padding: 8, boxWidth: 12 } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${Formato.formatearMoneda(ctx.raw, moneda)}` } },
+          },
+          scales: {
+            r: {
+              grid: { color: colorTema.grid },
+              angleLines: { color: colorTema.grid },
+              ticks: { color: colorTema.textSecondary, backdropColor: 'transparent', font: { size: 9 } },
+            },
+          },
+        },
+      });
+    },
+    
+    /**
+     * v12 — GRÁFICO 7: BARRAS APILADAS (stacked)
+     * Compara categorías día a día, apilando cada categoría
+     */
+    renderChartStacked(canvas) {
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const ahora = new Date();
+      const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+      
+      const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+      const fechaFin = ahora.toISOString().split('T')[0];
+      let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+      
+      if (this.tabActiva === 'income') trans = trans.filter(t => t.tipo === 'ingreso');
+      else trans = trans.filter(t => t.tipo === 'egreso');
+      
+      // Agrupar por día y categoría padre
+      const porDia = {};
+      const categoriasSet = new Set();
+      trans.forEach(t => {
+        const dia = new Date(t.fecha).getDate();
+        const cat = API.obtenerCategoriaPorId(t.categoriaId);
+        if (!cat) return;
+        const padre = cat.categoriaPadreId ? API.obtenerCategoriaPorId(cat.categoriaPadreId) : cat;
+        if (!padre) return;
+        
+        if (!porDia[dia]) porDia[dia] = {};
+        porDia[dia][padre.nombre] = (porDia[dia][padre.nombre] || 0) + Formato.convertir(t.monto, t.moneda, moneda);
+        categoriasSet.add(padre.nombre);
+      });
+      
+      const categoriasArr = Array.from(categoriasSet).slice(0, 6);
+      const colores = ['#14F0CD', '#06B6D4', '#8B5CF6', '#F59E0B', '#EF4444', '#10B981'];
+      const labels = Array.from({ length: diasEnMes }, (_, i) => i + 1);
+      
+      if (categoriasArr.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = Theme.coloresGrafico().textSecondary;
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin datos para este filtro', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      
+      const datasets = categoriasArr.map((catNombre, i) => ({
+        label: catNombre,
+        data: labels.map(d => porDia[d]?.[catNombre] || 0),
+        backgroundColor: colores[i % colores.length],
+        borderColor: colores[i % colores.length],
+        borderWidth: 0,
+        borderRadius: 2,
+      }));
+      
+      const colorTema = Theme.coloresGrafico();
+      
+      Graficos.instancias['chartActivity'] = new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: colorTema.textSecondary, font: { size: 10 }, padding: 8, boxWidth: 12 } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Formato.formatearMoneda(ctx.raw, moneda)}` } },
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: colorTema.textSecondary, font: { size: 10 } } },
+            y: { stacked: true, grid: { color: colorTema.grid }, ticks: { color: colorTema.textSecondary, font: { size: 10 } } },
+          },
+        },
+      });
+    },
+    
+    /**
+     * v12 — GRÁFICO 8: ÁREA APILADA
+     * Como línea pero con áreas rellenas apiladas (categorías acumuladas día a día)
+     */
+    renderChartArea(canvas) {
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const ahora = new Date();
+      const diasEnMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0).getDate();
+      
+      const fechaInicio = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString().split('T')[0];
+      const fechaFin = ahora.toISOString().split('T')[0];
+      let trans = this.obtenerTransaccionesFiltradas(fechaInicio, fechaFin);
+      
+      if (this.tabActiva === 'income') trans = trans.filter(t => t.tipo === 'ingreso');
+      else trans = trans.filter(t => t.tipo === 'egreso');
+      
+      const porDia = {};
+      const categoriasSet = new Set();
+      trans.forEach(t => {
+        const dia = new Date(t.fecha).getDate();
+        const cat = API.obtenerCategoriaPorId(t.categoriaId);
+        if (!cat) return;
+        const padre = cat.categoriaPadreId ? API.obtenerCategoriaPorId(cat.categoriaPadreId) : cat;
+        if (!padre) return;
+        
+        if (!porDia[dia]) porDia[dia] = {};
+        porDia[dia][padre.nombre] = (porDia[dia][padre.nombre] || 0) + Formato.convertir(t.monto, t.moneda, moneda);
+        categoriasSet.add(padre.nombre);
+      });
+      
+      const categoriasArr = Array.from(categoriasSet).slice(0, 5);
+      const colores = ['#14F0CD', '#06B6D4', '#8B5CF6', '#F59E0B', '#EF4444'];
+      const labels = Array.from({ length: diasEnMes }, (_, i) => i + 1);
+      
+      if (categoriasArr.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = Theme.coloresGrafico().textSecondary;
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin datos para este filtro', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      
+      // Calcular acumulado por categoría para hacer pila
+      const datasets = categoriasArr.map((catNombre, i) => {
+        const hex = colores[i % colores.length];
+        return {
+          label: catNombre,
+          data: labels.map(d => porDia[d]?.[catNombre] || 0),
+          backgroundColor: `rgba(${this.hexToRgb(hex)}, 0.4)`,
+          borderColor: hex,
+          borderWidth: 2,
+          fill: true,
+          tension: 0.35,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+        };
+      });
+      
+      const colorTema = Theme.coloresGrafico();
+      
+      Graficos.instancias['chartActivity'] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: colorTema.textSecondary, font: { size: 10 }, padding: 8, boxWidth: 12 } },
+            tooltip: { mode: 'index', intersect: false, callbacks: { label: (ctx) => `${ctx.dataset.label}: ${Formato.formatearMoneda(ctx.raw, moneda)}` } },
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: colorTema.textSecondary, font: { size: 10 } } },
+            y: { stacked: true, grid: { color: colorTema.grid }, ticks: { color: colorTema.textSecondary, font: { size: 10 } } },
+          },
+        },
+      });
+    },
+    
+    /**
      * Helper: convierte hex a "r, g, b" string
      */
     hexToRgb(hex) {
@@ -1112,23 +1430,36 @@
       });
     },
     
+    /**
+     * v12 — Panel "Activities" rediseñado
+     * Atajos verticales con icono+texto+flecha
+     */
     renderShortcuts() {
       const items = [
-        { icon: '🎯', name: 'Metas', color: 'orange', page: 'metas' },
-        { icon: '📅', name: 'Plan mensual', color: 'cyan', page: 'presupuestos' },
-        { icon: '⚙️', name: 'Configuración', color: 'purple', page: 'configuracion' },
-        { icon: '↔️', name: 'Transferencias', color: 'green', page: 'transferencias' },
+        { icon: '🎯', name: 'Metas', desc: 'Tus objetivos de ahorro', color: 'orange', page: 'metas' },
+        { icon: '📅', name: 'Plan mensual', desc: 'Presupuesto del mes', color: 'cyan', page: 'presupuestos' },
+        { icon: '⚙️', name: 'Configuración', desc: 'Preferencias y cuenta', color: 'purple', page: 'configuracion' },
+        { icon: '↔️', name: 'Transferencias', desc: 'Mover entre cuentas', color: 'green', page: 'transferencias' },
       ];
       
       return `
-        <div class="shortcuts-list">
-          ${items.map(it => `
-            <div class="shortcut-card" onclick="App.navegarA('${it.page}')">
-              <div class="shortcut-icon ${it.color}">${it.icon}</div>
-              <div class="shortcut-name">${it.name}</div>
-              <div class="shortcut-arrow">›</div>
-            </div>
-          `).join('')}
+        <div class="activities-panel">
+          <div class="activities-panel-header">
+            <span class="activities-panel-title">Activities</span>
+            <span class="activities-panel-badge">${items.length}</span>
+          </div>
+          <div class="activities-panel-list">
+            ${items.map(it => `
+              <div class="activity-shortcut" onclick="App.navegarA('${it.page}')">
+                <div class="activity-shortcut-icon ${it.color}">${it.icon}</div>
+                <div class="activity-shortcut-info">
+                  <div class="activity-shortcut-name">${it.name}</div>
+                  <div class="activity-shortcut-desc">${it.desc}</div>
+                </div>
+                <div class="activity-shortcut-arrow">›</div>
+              </div>
+            `).join('')}
+          </div>
         </div>
       `;
     },

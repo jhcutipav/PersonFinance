@@ -1,19 +1,20 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
-   v0.11.0 — Cambios:
-   - Sidebar rediseñado: logo+subtítulo unificados, sin card maleta
-   - Botón toggle más grande y elegante (28px con shadow glow)
-   - Páginas habilitadas: Configuración, Ayuda, Notificaciones
-   - Botón "+ Nueva" abre form directo (no modal de opciones)
-   - Tabs del form: Egreso / Ingreso / Transferir / Pagos
-   - Tab "Pagos" lleva a deudas/gastos/tarjetas/metas según elijas
-   - Tab "Transferir" abre el form de transferencia desde cualquier lugar
+   v12 — Cambios:
+   - Dashboard reorganizado:
+     · Fila superior: Panel "Activities" (izq, 240px) + Gráfico+Slider (der)
+     · Fila inferior: Tabla "Actividad reciente" ahora en ancho completo
+   - Slider de gráficos ampliado de 4 a 8 tipos:
+     · Existentes: Línea, Barras, Donut, Radial
+     · Nuevos: 🥧 Pie, 🌀 Polar, 📊 Stacked, 📉 Área apilada
+   - Flechas del slider movidas a los lados del canvas (más visibles)
+   - Panel Activities con título, badge y atajos verticales
    ============================================ */
 
-const APP_VERSION = '0.11.0';
+const APP_VERSION = '12';
 const APP_NAME = 'FinanzApp';
-const APP_BUILD = '2026-05-12';
+const APP_BUILD = '2026-05-13';
 
 const App = {
   

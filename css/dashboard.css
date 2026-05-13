@@ -389,18 +389,199 @@
 /* ============================================
    ACTIVITY CONTENT (gráfico izq + historial der)
    ============================================ */
+/* v12 — Layout reorganizado:
+   Fila superior: Activities (240px izq) + Gráfico+Slider (resto der)
+   Fila inferior: Recent activity (ancho completo) */
 .activity-grid {
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
+  grid-template-columns: 240px 1fr;
   gap: var(--space-md);
-  align-items: start;
+  align-items: stretch;
+  margin-bottom: var(--space-md);
 }
 
-/* Columna izquierda: gráfico + shortcuts */
+/* Columna izquierda: panel Activities */
 .activity-left {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+}
+
+/* Columna derecha: gráfico con slider */
+.activity-right {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  overflow: hidden;
+}
+
+.activity-right .activity-graph-card {
+  border: none;
+  border-radius: 0;
+  height: 100%;
+}
+
+/* Fila inferior: Recent activity ancho completo */
+.activity-history-fullwidth {
+  /* sin estilos especiales, hereda del padre */
+}
+
+/* ============================================
+   v12 — Panel Activities (estilo imagen ref)
+   ============================================ */
+.activities-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.activities-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.activities-panel-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.activities-panel-badge {
+  background: var(--accent-primary);
+  color: #0A0E1A;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.activities-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.activity-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.activity-shortcut:hover {
+  border-color: var(--accent-primary);
+  transform: translateX(2px);
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.05), transparent);
+}
+
+.activity-shortcut-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.activity-shortcut-icon.orange { background: rgba(245, 158, 11, 0.15); color: #F59E0B; }
+.activity-shortcut-icon.cyan { background: rgba(20, 240, 205, 0.15); color: #14F0CD; }
+.activity-shortcut-icon.purple { background: rgba(139, 92, 246, 0.15); color: #A78BFA; }
+.activity-shortcut-icon.green { background: rgba(16, 185, 129, 0.15); color: #10B981; }
+
+.activity-shortcut-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-shortcut-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.activity-shortcut-desc {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activity-shortcut-arrow {
+  color: var(--text-tertiary);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   v12 — Flechas del slider a los lados del canvas
+   ============================================ */
+.activity-graph-canvas-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: var(--space-sm) 0;
+}
+
+.activity-graph-canvas-wrap .activity-graph-canvas {
+  flex: 1;
+  min-width: 0;
+}
+
+.grafico-slider-arrow-side {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  padding: 0;
+}
+
+.grafico-slider-arrow-side:hover {
+  background: var(--accent-primary);
+  color: #0A0E1A;
+  border-color: var(--accent-primary);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 12px rgba(20, 240, 205, 0.3);
+}
+
+.grafico-slider-arrow-side.grafico-slider-prev {
+  left: -8px;
+}
+
+.grafico-slider-arrow-side.grafico-slider-next {
+  right: -8px;
 }
 
 .activity-graph-card {
@@ -495,13 +676,7 @@
   font-size: 1rem;
 }
 
-/* Columna derecha: historial */
-.activity-right {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
-}
+/* (la antigua definición de .activity-right fue reemplazada arriba en v12) */
 
 .history-tabs {
   display: flex;
