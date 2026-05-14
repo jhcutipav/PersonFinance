@@ -9,10 +9,14 @@
     tabActiva: 'activity', // activity | spending | income
     historyTab: 'history', // history | upcoming
     filtroActividad: 'todas', // 'todas' | 'cuenta_X' | 'tarjeta_X'
-    graficoTipoActivo: 0, // v12 — ampliado a 8 tipos
+    graficoTipoActivo: 0,
     TIPOS_GRAFICO: ['linea', 'barras', 'donut', 'radial', 'pie', 'polar', 'stacked', 'area'],
     autoplayInterval: null,
     AUTOPLAY_MS: 15000,
+    
+    // v13 — Estado del Resumen General
+    resumenFiltro: 'todas',  // 'todas' | 'cuenta_X' | 'tarjeta_X'
+    resumenMes: null,  // null = mes actual, o {mes, anio}
     
     render(container, monedaVista = 'PEN') {
       this.monedaVista = monedaVista;
@@ -28,10 +32,16 @@
         <div class="dashboard-layout">
           <div class="dashboard-main">
             ${this.renderGreeting()}
-            ${this.renderStatsConTarjeta()}
-            ${this.renderSummaryTabs()}
-            <div id="summaryContent">
-              ${this.renderActivityContent()}
+            
+            <!-- v13 — Card grande "Resumen general" con stats + gráfico -->
+            ${this.renderResumenGeneral()}
+            
+            <!-- Slider de tarjetas + resumen de tarjeta seleccionada -->
+            ${this.renderTarjetasYResumen()}
+            
+            <!-- Tabla Recent Activity ancho completo -->
+            <div class="activity-history-fullwidth">
+              ${this.renderHistory()}
             </div>
           </div>
           
@@ -44,13 +54,14 @@
       `;
       
       setTimeout(() => {
-        this.renderChartActividad();
+        this.renderChartResumenGeneral();  // v13 — nuevo gráfico
         this.renderSparklinesFavorites();
         this.renderChartResumenTarjeta();
+        this.renderChartUsoTarjetas();     // v13 — donut con uso de cada tarjeta
       }, 50);
       
       this.configurarEventos();
-      this.configurarSlider();
+      this.configurarEventosResumenGeneral();  // v13
     },
     
     /* ============ SALUDO ============ */
@@ -81,6 +92,544 @@
           </div>
         </div>
       `;
+    },
+    
+    /* ============================================
+       v13 — RESUMEN GENERAL (card grande con stats + gráfico)
+       Reemplaza: stats-row-top + summaryTabs + activityContent
+       Layout:
+       ┌─────────────────────────────────────────────────┐
+       │ Resumen general          [Mes anterior >]       │
+       │                                                 │
+       │  saldo        ingresos       egresos            │
+       │  S/ 33,846    S/ 13,846      S/ 21,124          │
+       │                                                 │
+       │  ┌──────────────────────────────────────────┐   │
+       │  │  📈 Gráfico líneas (saldo/ingr/egresos)  │   │
+       │  └──────────────────────────────────────────┘   │
+       └─────────────────────────────────────────────────┘
+       ============================================ */
+    renderResumenGeneral() {
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      
+      // Determinar mes/año a mostrar
+      const ahora = new Date();
+      const mes = this.resumenMes ? this.resumenMes.mes : ahora.getMonth();
+      const anio = this.resumenMes ? this.resumenMes.anio : ahora.getFullYear();
+      const esMesActual = mes === ahora.getMonth() && anio === ahora.getFullYear();
+      
+      // Calcular stats según filtro y mes
+      const stats = this.calcularStatsResumen(mes, anio, moneda);
+      
+      // Obtener cuentas y tarjetas para el selector
+      const cuentas = API.obtenerCuentas().filter(c => c.tipo !== 'credito');
+      const tarjetas = API.obtenerTarjetas();
+      
+      // Label del filtro
+      let filtroLabel = 'Todas las cuentas';
+      if (this.resumenFiltro.startsWith('cuenta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        const c = cuentas.find(c => c.id === id);
+        if (c) filtroLabel = c.nombre;
+      } else if (this.resumenFiltro.startsWith('tarjeta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        const t = tarjetas.find(t => t.id === id);
+        if (t) filtroLabel = t.nombre;
+      }
+      
+      const mesesCortos = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const labelMes = `${mesesCortos[mes]}, ${anio}`;
+      
+      return `
+        <div class="resumen-general-card">
+          <!-- Header: filtro a la izquierda, navegador de mes a la derecha -->
+          <div class="resumen-general-header">
+            <div class="resumen-general-filtro-wrap">
+              <select class="resumen-general-filtro" id="resumenFiltro">
+                <option value="todas" ${this.resumenFiltro === 'todas' ? 'selected' : ''}>📊 Todas las cuentas</option>
+                ${cuentas.length > 0 ? `
+                  <optgroup label="💵 Cuentas">
+                    ${cuentas.map(c => `
+                      <option value="cuenta_${c.id}" ${this.resumenFiltro === `cuenta_${c.id}` ? 'selected' : ''}>
+                        ${c.icono || '🏦'} ${c.nombre}
+                      </option>
+                    `).join('')}
+                  </optgroup>
+                ` : ''}
+                ${tarjetas.length > 0 ? `
+                  <optgroup label="💳 Tarjetas">
+                    ${tarjetas.map(t => `
+                      <option value="tarjeta_${t.id}" ${this.resumenFiltro === `tarjeta_${t.id}` ? 'selected' : ''}>
+                        💳 ${t.nombre}
+                      </option>
+                    `).join('')}
+                  </optgroup>
+                ` : ''}
+              </select>
+            </div>
+            
+            <!-- Selector de mes (con flechas) -->
+            <div class="resumen-general-mes-nav">
+              <button class="resumen-mes-arrow" id="resumenMesPrev" title="Mes anterior">‹</button>
+              <button class="resumen-mes-actual" id="resumenMesActual" title="Click para ir al mes actual">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span>${labelMes}</span>
+              </button>
+              <button class="resumen-mes-arrow" id="resumenMesNext" title="Mes siguiente" ${esMesActual ? 'disabled' : ''}>›</button>
+            </div>
+          </div>
+          
+          <!-- Stats grandes en línea -->
+          <div class="resumen-general-stats">
+            <div class="resumen-stat">
+              <div class="resumen-stat-label">Saldo</div>
+              <div class="resumen-stat-value resumen-stat-saldo">
+                <span class="resumen-stat-currency">${Formato.SIMBOLOS[moneda]}</span>
+                ${this.formatearNumeroResumen(stats.saldo)}
+                <span class="resumen-stat-trend ${stats.saldo >= 0 ? 'up' : 'down'}">
+                  ${stats.saldo >= 0 ? '↗' : '↘'}
+                </span>
+              </div>
+            </div>
+            
+            <div class="resumen-stat">
+              <div class="resumen-stat-label">Ingresos</div>
+              <div class="resumen-stat-value resumen-stat-ingresos">
+                <span class="resumen-stat-currency">${Formato.SIMBOLOS[moneda]}</span>
+                ${this.formatearNumeroResumen(stats.ingresos)}
+                <span class="resumen-stat-trend up">↗</span>
+              </div>
+            </div>
+            
+            <div class="resumen-stat">
+              <div class="resumen-stat-label">Egresos</div>
+              <div class="resumen-stat-value resumen-stat-egresos">
+                <span class="resumen-stat-currency">${Formato.SIMBOLOS[moneda]}</span>
+                ${this.formatearNumeroResumen(stats.egresos)}
+                <span class="resumen-stat-trend down">↘</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Filtro activo (badge sutil) -->
+          ${this.resumenFiltro !== 'todas' ? `
+            <div class="resumen-filtro-badge">
+              <span>🔍 Mostrando: <strong>${filtroLabel}</strong></span>
+              <button onclick="Dashboard.cambiarFiltroResumen('todas')" title="Limpiar filtro">✕</button>
+            </div>
+          ` : ''}
+          
+          <!-- Gráfico de 3 líneas -->
+          <div class="resumen-general-chart-wrap">
+            <canvas id="chartResumenGeneral"></canvas>
+          </div>
+        </div>
+      `;
+    },
+    
+    /**
+     * v13 — Formatea número grande con espacios para legibilidad
+     * Ej: 33846 → "33, 846"
+     */
+    formatearNumeroResumen(num) {
+      const entero = Math.floor(Math.abs(num));
+      const str = entero.toLocaleString('es-PE');
+      return Math.abs(num) < 1000 ? str + '.00' : str;
+    },
+    
+    /**
+     * v13 — Calcula los 3 stats principales aplicando filtro y mes
+     */
+    calcularStatsResumen(mes, anio, moneda) {
+      const todasTrans = API.obtenerTransacciones({ incluirTransferencias: false });
+      
+      // Filtrar por filtro de cuenta/tarjeta
+      let trans = todasTrans;
+      if (this.resumenFiltro.startsWith('cuenta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        trans = trans.filter(t => t.cuentaId === id);
+      } else if (this.resumenFiltro.startsWith('tarjeta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        trans = trans.filter(t => t.tarjetaId === id);
+      }
+      
+      // Filtrar por mes/año
+      const transMes = trans.filter(t => {
+        const fecha = new Date(t.fecha + 'T00:00:00');
+        return fecha.getMonth() === mes && fecha.getFullYear() === anio;
+      });
+      
+      // Calcular ingresos y egresos del mes
+      let ingresos = 0, egresos = 0;
+      transMes.forEach(t => {
+        const m = Formato.convertir(t.monto, t.moneda, moneda);
+        if (t.tipo === 'ingreso') ingresos += m;
+        else if (t.tipo === 'egreso') egresos += m;
+      });
+      
+      // Saldo: depende del filtro
+      let saldo;
+      if (this.resumenFiltro === 'todas') {
+        saldo = API.calcularSaldoTotal(moneda);
+      } else if (this.resumenFiltro.startsWith('cuenta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        const cuenta = API.obtenerCuentaPorId(id);
+        saldo = cuenta ? Formato.convertir(cuenta.saldo, cuenta.moneda, moneda) : 0;
+      } else if (this.resumenFiltro.startsWith('tarjeta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        const tarj = API.obtenerTarjetaPorId(id);
+        // Para tarjeta de crédito, "saldo" = disponible
+        if (tarj) {
+          const disp = (tarj.lineaCredito || 0) - (tarj.saldoUsado || 0);
+          saldo = Formato.convertir(disp, tarj.moneda, moneda);
+        } else {
+          saldo = 0;
+        }
+      } else {
+        saldo = 0;
+      }
+      
+      return { saldo, ingresos, egresos };
+    },
+    
+    /**
+     * v13 — Render del gráfico de 3 líneas (Saldo, Ingresos, Egresos por día)
+     */
+    renderChartResumenGeneral() {
+      const canvas = document.getElementById('chartResumenGeneral');
+      if (!canvas) return;
+      
+      Graficos.destruir('chartResumenGeneral');
+      
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const ahora = new Date();
+      const mes = this.resumenMes ? this.resumenMes.mes : ahora.getMonth();
+      const anio = this.resumenMes ? this.resumenMes.anio : ahora.getFullYear();
+      const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+      
+      // Obtener todas las transacciones filtradas
+      const todasTrans = API.obtenerTransacciones({ incluirTransferencias: false });
+      let trans = todasTrans;
+      if (this.resumenFiltro.startsWith('cuenta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        trans = trans.filter(t => t.cuentaId === id);
+      } else if (this.resumenFiltro.startsWith('tarjeta_')) {
+        const id = parseInt(this.resumenFiltro.split('_')[1]);
+        trans = trans.filter(t => t.tarjetaId === id);
+      }
+      
+      // Filtrar por mes
+      const transMes = trans.filter(t => {
+        const f = new Date(t.fecha + 'T00:00:00');
+        return f.getMonth() === mes && f.getFullYear() === anio;
+      });
+      
+      // Acumulados diarios
+      const ingresosPorDia = new Array(diasEnMes).fill(0);
+      const egresosPorDia = new Array(diasEnMes).fill(0);
+      
+      transMes.forEach(t => {
+        const f = new Date(t.fecha + 'T00:00:00');
+        const dia = f.getDate() - 1; // índice 0-based
+        const m = Formato.convertir(t.monto, t.moneda, moneda);
+        if (t.tipo === 'ingreso') ingresosPorDia[dia] += m;
+        else if (t.tipo === 'egreso') egresosPorDia[dia] += m;
+      });
+      
+      // Acumulados (cada día suma el anterior para tener "curva")
+      const ingresosAcum = [];
+      const egresosAcum = [];
+      const saldoAcum = [];
+      
+      // Saldo inicial: stat actual menos lo que pasó este mes
+      const stats = this.calcularStatsResumen(mes, anio, moneda);
+      const saldoInicial = stats.saldo - (stats.ingresos - stats.egresos);
+      
+      let accIng = 0, accEgr = 0;
+      for (let i = 0; i < diasEnMes; i++) {
+        accIng += ingresosPorDia[i];
+        accEgr += egresosPorDia[i];
+        ingresosAcum.push(accIng);
+        egresosAcum.push(accEgr);
+        saldoAcum.push(saldoInicial + accIng - accEgr);
+      }
+      
+      const labels = Array.from({ length: diasEnMes }, (_, i) => i + 1);
+      const colorTema = Theme.coloresGrafico();
+      
+      Graficos.instancias['chartResumenGeneral'] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Saldo',
+              data: saldoAcum,
+              borderColor: '#14F0CD',
+              backgroundColor: 'rgba(20, 240, 205, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              fill: false,
+            },
+            {
+              label: 'Ingresos',
+              data: ingresosAcum,
+              borderColor: '#A3E635',
+              backgroundColor: 'rgba(163, 230, 53, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              fill: false,
+            },
+            {
+              label: 'Egresos',
+              data: egresosAcum,
+              borderColor: '#EF4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'top',
+              align: 'end',
+              labels: {
+                color: colorTema.textSecondary,
+                font: { size: 11, weight: '500' },
+                padding: 12,
+                boxWidth: 16,
+                usePointStyle: true,
+                pointStyle: 'circle',
+              },
+            },
+            tooltip: {
+              backgroundColor: colorTema.cardBg,
+              titleColor: colorTema.textPrimary,
+              bodyColor: colorTema.textSecondary,
+              borderColor: colorTema.cardBorder,
+              borderWidth: 1,
+              padding: 10,
+              callbacks: {
+                title: (items) => `Día ${items[0].label}`,
+                label: (ctx) => `${ctx.dataset.label}: ${Formato.formatearMoneda(ctx.raw, moneda)}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                color: colorTema.textSecondary,
+                font: { size: 10 },
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 16,
+              },
+            },
+            y: {
+              grid: { color: colorTema.grid, drawBorder: false },
+              ticks: {
+                color: colorTema.textSecondary,
+                font: { size: 10 },
+                callback: (v) => `${Formato.SIMBOLOS[moneda]}${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`,
+                maxTicksLimit: 8,
+              },
+            },
+          },
+        },
+      });
+    },
+    
+    /**
+     * v13 — Donut con % de uso de cada tarjeta de crédito
+     * Muestra cada tarjeta como una rebanada coloreada según su % de uso
+     */
+    renderChartUsoTarjetas() {
+      const canvas = document.getElementById('chartUsoTarjetas');
+      if (!canvas) return;
+      
+      Graficos.destruir('chartUsoTarjetas');
+      
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const tarjetas = API.obtenerTarjetas().filter(t => !t.tipoTarjeta || t.tipoTarjeta === 'credito');
+      
+      if (tarjetas.length === 0) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = Theme.coloresGrafico().textSecondary;
+        ctx.font = '11px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin tarjetas de crédito', canvas.width / 2, canvas.height / 2);
+        return;
+      }
+      
+      // Cada tarjeta es una rebanada: tamaño = su línea, color según uso
+      const labels = tarjetas.map(t => t.nombre);
+      const datos = tarjetas.map(t => Formato.convertir(t.lineaCredito || 0, t.moneda, moneda));
+      const usados = tarjetas.map(t => Formato.convertir(t.saldoUsado || 0, t.moneda, moneda));
+      
+      // Color según %uso de cada tarjeta
+      const colores = tarjetas.map(t => {
+        const pct = t.lineaCredito > 0 ? (t.saldoUsado / t.lineaCredito) * 100 : 0;
+        if (pct >= 70) return '#EF4444';
+        if (pct >= 30) return '#F59E0B';
+        return '#10B981';
+      });
+      
+      // % global
+      const totalLinea = datos.reduce((s, v) => s + v, 0);
+      const totalUsado = usados.reduce((s, v) => s + v, 0);
+      const pctGlobal = totalLinea > 0 ? ((totalUsado / totalLinea) * 100).toFixed(0) : 0;
+      
+      Graficos.instancias['chartUsoTarjetas'] = new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: datos,
+            backgroundColor: colores,
+            borderWidth: 2,
+            borderColor: Theme.coloresGrafico().cardBg || '#0F172A',
+            hoverOffset: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const i = ctx.dataIndex;
+                  const t = tarjetas[i];
+                  const pct = t.lineaCredito > 0 ? (t.saldoUsado / t.lineaCredito) * 100 : 0;
+                  return `${t.nombre}: ${pct.toFixed(1)}% usado (${Formato.formatearMoneda(t.saldoUsado, t.moneda)} / ${Formato.formatearMoneda(t.lineaCredito, t.moneda)})`;
+                },
+              },
+            },
+          },
+        },
+      });
+      
+      // Pintar el % en el centro del donut
+      const ctx = canvas.getContext('2d');
+      // Esperar a que se dibuje el donut
+      setTimeout(() => {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.save();
+        ctx.fillStyle = Theme.coloresGrafico().textPrimary;
+        ctx.font = 'bold 22px Inter';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`+${pctGlobal}%`, w / 2, h / 2);
+        ctx.restore();
+      }, 100);
+    },
+    
+    /**
+     * v13 — Configurar eventos del Resumen General
+     */
+    configurarEventosResumenGeneral() {
+      // Filtro de cuenta/tarjeta
+      const filtroEl = document.getElementById('resumenFiltro');
+      if (filtroEl) {
+        filtroEl.addEventListener('change', (e) => {
+          this.cambiarFiltroResumen(e.target.value);
+        });
+      }
+      
+      // Navegación de mes
+      const btnPrev = document.getElementById('resumenMesPrev');
+      const btnNext = document.getElementById('resumenMesNext');
+      const btnActual = document.getElementById('resumenMesActual');
+      
+      if (btnPrev) {
+        btnPrev.addEventListener('click', () => {
+          this.cambiarMesResumen(-1);
+        });
+      }
+      if (btnNext) {
+        btnNext.addEventListener('click', () => {
+          this.cambiarMesResumen(1);
+        });
+      }
+      if (btnActual) {
+        btnActual.addEventListener('click', () => {
+          this.resumenMes = null;
+          this.refrescarResumenGeneral();
+        });
+      }
+    },
+    
+    /**
+     * v13 — Cambiar filtro de cuenta/tarjeta del resumen
+     */
+    cambiarFiltroResumen(nuevoFiltro) {
+      this.resumenFiltro = nuevoFiltro;
+      this.refrescarResumenGeneral();
+    },
+    
+    /**
+     * v13 — Cambiar mes del resumen (delta = -1 anterior, +1 siguiente)
+     */
+    cambiarMesResumen(delta) {
+      const ahora = new Date();
+      const mesActual = this.resumenMes ? this.resumenMes.mes : ahora.getMonth();
+      const anioActual = this.resumenMes ? this.resumenMes.anio : ahora.getFullYear();
+      
+      let nuevoMes = mesActual + delta;
+      let nuevoAnio = anioActual;
+      
+      if (nuevoMes < 0) { nuevoMes = 11; nuevoAnio--; }
+      else if (nuevoMes > 11) { nuevoMes = 0; nuevoAnio++; }
+      
+      // No permitir ir más allá del mes actual
+      const ahoraMes = ahora.getMonth();
+      const ahoraAnio = ahora.getFullYear();
+      if (nuevoAnio > ahoraAnio || (nuevoAnio === ahoraAnio && nuevoMes > ahoraMes)) {
+        return;
+      }
+      
+      // Si llegamos al mes actual, resetear a null
+      if (nuevoMes === ahoraMes && nuevoAnio === ahoraAnio) {
+        this.resumenMes = null;
+      } else {
+        this.resumenMes = { mes: nuevoMes, anio: nuevoAnio };
+      }
+      
+      this.refrescarResumenGeneral();
+    },
+    
+    /**
+     * v13 — Refrescar solo la sección del Resumen General (no todo el dashboard)
+     */
+    refrescarResumenGeneral() {
+      // Re-render del card
+      const layout = document.querySelector('.dashboard-main');
+      if (!layout) return;
+      
+      // Re-renderizar todo el dashboard para que la tabla de Recent Activity 
+      // también respete el filtro si es necesario
+      const container = document.getElementById('pageContent');
+      if (container) {
+        this.render(container, this.monedaVista);
+      }
     },
     
     /* ============ STATS PRINCIPALES (todas arriba) ============
@@ -1665,6 +2214,16 @@
     renderPortfolio() {
       const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
       const patrimonio = API.calcularPatrimonioCredito(moneda);
+      const tarjetas = API.obtenerTarjetas().filter(t => !t.tipoTarjeta || t.tipoTarjeta === 'credito');
+      
+      // Calcular % de cada tarjeta para leyenda lateral
+      const tarjetasInfo = tarjetas.map(t => {
+        const pct = t.lineaCredito > 0 ? (t.saldoUsado / t.lineaCredito) * 100 : 0;
+        let color = '#10B981';
+        if (pct >= 70) color = '#EF4444';
+        else if (pct >= 30) color = '#F59E0B';
+        return { ...t, pct, color };
+      });
       
       return `
         <div class="aside-card patrimonio-card patrimonio-${patrimonio.estado}">
@@ -1680,17 +2239,33 @@
           
           <div class="portfolio-amount">${Formato.formatearMoneda(patrimonio.lineaTotal, moneda)}</div>
           
-          <!-- Barra de uso con color de semáforo -->
-          <div class="patrimonio-progress">
-            <div class="patrimonio-progress-label">
-              <span>Uso global</span>
-              <strong style="color:${patrimonio.color};">${patrimonio.porcentaje.toFixed(1)}%</strong>
-            </div>
-            <div class="patrimonio-progress-bar">
-              <div class="patrimonio-progress-fill" 
-                   style="width:${Math.min(patrimonio.porcentaje, 100)}%;background:linear-gradient(90deg, ${patrimonio.color}, ${patrimonio.color}cc);"></div>
-            </div>
+          <!-- Etiqueta de uso global -->
+          <div class="patrimonio-uso-global">
+            <span>Uso global</span>
+            <strong style="color:${patrimonio.color};">${patrimonio.porcentaje.toFixed(1)}%</strong>
           </div>
+          
+          <!-- v13 — Donut con % de uso por cada tarjeta -->
+          ${tarjetas.length > 0 ? `
+            <div class="patrimonio-donut-wrap">
+              <div class="patrimonio-donut">
+                <canvas id="chartUsoTarjetas"></canvas>
+              </div>
+              <div class="patrimonio-donut-legend">
+                ${tarjetasInfo.map(t => `
+                  <div class="patrimonio-donut-legend-item">
+                    <span class="legend-dot" style="background:${t.color};"></span>
+                    <span class="legend-name" title="${t.nombre}">${t.nombre.length > 12 ? t.nombre.substring(0, 12) + '…' : t.nombre}</span>
+                    <span class="legend-pct" style="color:${t.color};">${t.pct.toFixed(0)}%</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : `
+            <div style="text-align:center;padding:var(--space-md);color:var(--text-tertiary);font-size:0.8125rem;">
+              Sin tarjetas de crédito registradas
+            </div>
+          `}
           
           <!-- Desglose: usado / disponible -->
           <div class="patrimonio-stats">
@@ -1706,17 +2281,6 @@
                 ${Formato.formatearMoneda(patrimonio.disponible, moneda)}
               </div>
             </div>
-          </div>
-          
-          <div class="portfolio-actions">
-            <button class="portfolio-btn primary" onclick="TransaccionForm.abrir(null, () => App.cargarPaginaActual())">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-              Ingreso
-            </button>
-            <button class="portfolio-btn secondary" onclick="TransaccionForm.abrir(null, () => App.cargarPaginaActual())">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4"/></svg>
-              Egreso
-            </button>
           </div>
         </div>
       `;

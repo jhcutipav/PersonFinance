@@ -1,20 +1,22 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
-   v12 — Cambios:
-   - Dashboard reorganizado:
-     · Fila superior: Panel "Activities" (izq, 240px) + Gráfico+Slider (der)
-     · Fila inferior: Tabla "Actividad reciente" ahora en ancho completo
-   - Slider de gráficos ampliado de 4 a 8 tipos:
-     · Existentes: Línea, Barras, Donut, Radial
-     · Nuevos: 🥧 Pie, 🌀 Polar, 📊 Stacked, 📉 Área apilada
-   - Flechas del slider movidas a los lados del canvas (más visibles)
-   - Panel Activities con título, badge y atajos verticales
+   v13 — Cambios:
+   - Sidebar: quitada la flecha toggle, ahora el LOGO 💎 abre/cierra
+   - Reset de datos: triple-click pasa del logo al AVATAR del header
+   - Dashboard rediseñado:
+     · Nuevo card "Resumen general" ancho completo con:
+       - Filtro de cuenta/tarjeta (cambia todos los datos)
+       - Navegador de mes (flechas ‹ › + click para volver al actual)
+       - 3 stats grandes: Saldo, Ingresos, Egresos
+       - Gráfico de 3 líneas (Saldo/Ingresos/Egresos acumulados diarios)
+   - "Línea de crédito total" ahora muestra DONUT con % de uso 
+     de CADA tarjeta de crédito + leyenda lateral con colores semáforo
    ============================================ */
 
-const APP_VERSION = '12';
+const APP_VERSION = '13';
 const APP_NAME = 'FinanzApp';
-const APP_BUILD = '2026-05-13';
+const APP_BUILD = '2026-05-14';
 
 const App = {
   
@@ -62,12 +64,12 @@ const App = {
   },
   
   /**
-   * Toggle del sidebar (expandido/colapsado) con persistencia
+   * v13 — Toggle del sidebar: ahora se hace click en el LOGO (no en flecha)
    */
   configurarSidebarToggle() {
-    const btn = document.getElementById('sidebarToggle');
+    const logoToggle = document.getElementById('sidebarLogoToggle');
     const container = document.querySelector('.app-container');
-    if (!btn || !container) return;
+    if (!logoToggle || !container) return;
     
     // Cargar estado guardado (default: cerrado)
     const expandido = localStorage.getItem('finanzapp_sidebar_expanded') === 'true';
@@ -75,7 +77,7 @@ const App = {
       container.classList.add('sidebar-expanded');
     }
     
-    btn.addEventListener('click', (e) => {
+    logoToggle.addEventListener('click', (e) => {
       e.stopPropagation();
       container.classList.toggle('sidebar-expanded');
       const ahoraExpandido = container.classList.contains('sidebar-expanded');
@@ -403,15 +405,22 @@ const App = {
     }
   },
   
-  // Triple-click en el logo para resetear (modo dev)
+  /**
+   * v13 — Triple-click en el AVATAR del header para resetear
+   * (antes era en el logo, ahora el logo abre/cierra sidebar)
+   */
   configurarBotonReset() {
-    const logo = document.querySelector('.logo');
-    if (!logo) return;
+    const avatar = document.getElementById('profileAvatar');
+    if (!avatar) return;
+    
+    // Pista visual
+    avatar.title = 'Triple-click para resetear datos';
+    avatar.style.cursor = 'pointer';
     
     let clicks = 0;
     let timer;
     
-    logo.addEventListener('click', () => {
+    avatar.addEventListener('click', () => {
       clicks++;
       clearTimeout(timer);
       timer = setTimeout(() => clicks = 0, 600);
