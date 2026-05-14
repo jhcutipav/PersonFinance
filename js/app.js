@@ -1,20 +1,22 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
-   v13 — Cambios:
-   - Sidebar: quitada la flecha toggle, ahora el LOGO 💎 abre/cierra
-   - Reset de datos: triple-click pasa del logo al AVATAR del header
-   - Dashboard rediseñado:
-     · Nuevo card "Resumen general" ancho completo con:
-       - Filtro de cuenta/tarjeta (cambia todos los datos)
-       - Navegador de mes (flechas ‹ › + click para volver al actual)
-       - 3 stats grandes: Saldo, Ingresos, Egresos
-       - Gráfico de 3 líneas (Saldo/Ingresos/Egresos acumulados diarios)
-   - "Línea de crédito total" ahora muestra DONUT con % de uso 
-     de CADA tarjeta de crédito + leyenda lateral con colores semáforo
+   v14 — Cambios:
+   - Concepto "Bancarizado vs No bancarizado" agregado
+   - Campo `bancarizado` (boolean) en cada cuenta
+   - Cuentas separadas según visibilidad para SBS/SUNAT:
+     · 🏦 Bancarizado: BCP, Interbank, BBVA, Yape, Plin (vinculados a banco)
+     · 💵 No bancarizado: Efectivo, Prex
+   - Billeteras (Yape, Plin) tienen tipo 'billetera' y campo cuentaVinculadaId
+   - Toggle en Resumen General: [Todo / Bancarizado / No bancarizado]
+   - Nueva card en aside derecho: "💰 Dinero en tu poder"
+     con barra de proporción + desglose detallado
+   - Métodos API: calcularSaldoBancarizado, calcularSaldoNoBancarizado,
+     obtenerCuentasPorBancarizacion
+   - Corregidos typos de colores en mockData (skylue→skyblue, bue→blue)
    ============================================ */
 
-const APP_VERSION = '13';
+const APP_VERSION = '14';
 const APP_NAME = 'FinanzApp';
 const APP_BUILD = '2026-05-14';
 

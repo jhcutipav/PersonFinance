@@ -17,6 +17,8 @@
     // v13 — Estado del Resumen General
     resumenFiltro: 'todas',  // 'todas' | 'cuenta_X' | 'tarjeta_X'
     resumenMes: null,  // null = mes actual, o {mes, anio}
+    // v14 — Filtro de bancarización
+    resumenBancarizacion: 'todas',  // 'todas' | 'bancarizado' | 'no_bancarizado'
     
     render(container, monedaVista = 'PEN') {
       this.monedaVista = monedaVista;
@@ -46,6 +48,7 @@
           </div>
           
           <aside class="dashboard-aside">
+            ${this.renderDineroEnPoder()}
             ${this.renderPortfolio()}
             ${this.renderFavorites()}
             ${this.renderUpcoming()}
@@ -168,6 +171,19 @@
               </select>
             </div>
             
+            <!-- v14 — Toggle de bancarización -->
+            <div class="bancarizacion-toggle">
+              <button class="banc-toggle-btn ${this.resumenBancarizacion === 'todas' ? 'active' : ''}" data-banc="todas">
+                📊 Todo
+              </button>
+              <button class="banc-toggle-btn ${this.resumenBancarizacion === 'bancarizado' ? 'active' : ''}" data-banc="bancarizado">
+                🏦 Bancarizado
+              </button>
+              <button class="banc-toggle-btn ${this.resumenBancarizacion === 'no_bancarizado' ? 'active' : ''}" data-banc="no_bancarizado">
+                💵 No bancarizado
+              </button>
+            </div>
+            
             <!-- Selector de mes (con flechas) -->
             <div class="resumen-general-mes-nav">
               <button class="resumen-mes-arrow" id="resumenMesPrev" title="Mes anterior">‹</button>
@@ -241,9 +257,17 @@
     
     /**
      * v13 — Calcula los 3 stats principales aplicando filtro y mes
+     * v14 — También aplica filtro de bancarización
      */
     calcularStatsResumen(mes, anio, moneda) {
       const todasTrans = API.obtenerTransacciones({ incluirTransferencias: false });
+      
+      // v14 — Pre-filtrar por bancarización (afecta SOLO si filtroFiltro === 'todas')
+      let cuentasBancFiltradas = null;
+      if (this.resumenBancarizacion !== 'todas' && this.resumenFiltro === 'todas') {
+        const cuentasFiltradas = API.obtenerCuentasPorBancarizacion(this.resumenBancarizacion);
+        cuentasBancFiltradas = new Set(cuentasFiltradas.map(c => c.id));
+      }
       
       // Filtrar por filtro de cuenta/tarjeta
       let trans = todasTrans;
@@ -253,6 +277,9 @@
       } else if (this.resumenFiltro.startsWith('tarjeta_')) {
         const id = parseInt(this.resumenFiltro.split('_')[1]);
         trans = trans.filter(t => t.tarjetaId === id);
+      } else if (cuentasBancFiltradas) {
+        // v14 — Filtro por bancarización
+        trans = trans.filter(t => cuentasBancFiltradas.has(t.cuentaId));
       }
       
       // Filtrar por mes/año
@@ -272,7 +299,14 @@
       // Saldo: depende del filtro
       let saldo;
       if (this.resumenFiltro === 'todas') {
-        saldo = API.calcularSaldoTotal(moneda);
+        // v14 — Aplicar bancarización si está activa
+        if (this.resumenBancarizacion === 'bancarizado') {
+          saldo = API.calcularSaldoBancarizado(moneda);
+        } else if (this.resumenBancarizacion === 'no_bancarizado') {
+          saldo = API.calcularSaldoNoBancarizado(moneda);
+        } else {
+          saldo = API.calcularSaldoTotal(moneda);
+        }
       } else if (this.resumenFiltro.startsWith('cuenta_')) {
         const id = parseInt(this.resumenFiltro.split('_')[1]);
         const cuenta = API.obtenerCuentaPorId(id);
@@ -575,6 +609,14 @@
           this.refrescarResumenGeneral();
         });
       }
+      
+      // v14 — Toggle bancarización
+      document.querySelectorAll('[data-banc]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.resumenBancarizacion = btn.dataset.banc;
+          this.refrescarResumenGeneral();
+        });
+      });
     },
     
     /**
@@ -2211,6 +2253,59 @@
     
     /* ============ ASIDE: PORTFOLIO ============ */
     /* v0.10.2 — Patrimonio rediseñado: solo línea de crédito con semáforo */
+    /**
+     * v14 — Card "Dinero en tu poder" 
+     * Muestra: total + desglose bancarizado/no bancarizado
+     */
+    renderDineroEnPoder() {
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const total = API.calcularSaldoTotal(moneda);
+      const bancarizado = API.calcularSaldoBancarizado(moneda);
+      const noBancarizado = API.calcularSaldoNoBancarizado(moneda);
+      
+      const pctBanc = total > 0 ? (bancarizado / total) * 100 : 0;
+      const pctNoBanc = total > 0 ? (noBancarizado / total) * 100 : 0;
+      
+      return `
+        <div class="aside-card dinero-poder-card">
+          <div class="aside-card-header">
+            <div class="aside-card-titles">
+              <div class="aside-card-title">💰 Dinero en tu poder</div>
+              <div class="aside-card-subtitle">Suma de todas tus cuentas</div>
+            </div>
+          </div>
+          
+          <div class="dinero-poder-total">${Formato.formatearMoneda(total, moneda)}</div>
+          
+          <!-- Barra de proporción -->
+          <div class="dinero-poder-barra">
+            <div class="dinero-poder-banc" style="width:${pctBanc}%;" title="${pctBanc.toFixed(1)}% bancarizado"></div>
+            <div class="dinero-poder-noBanc" style="width:${pctNoBanc}%;" title="${pctNoBanc.toFixed(1)}% no bancarizado"></div>
+          </div>
+          
+          <!-- Desglose -->
+          <div class="dinero-poder-stats">
+            <div class="dinero-poder-stat">
+              <div class="dinero-poder-dot banc"></div>
+              <div class="dinero-poder-stat-info">
+                <div class="dinero-poder-stat-label">🏦 Bancarizado</div>
+                <div class="dinero-poder-stat-value">${Formato.formatearMoneda(bancarizado, moneda)}</div>
+                <div class="dinero-poder-stat-meta">${pctBanc.toFixed(0)}% del total · Visible para SBS/SUNAT</div>
+              </div>
+            </div>
+            <div class="dinero-poder-stat">
+              <div class="dinero-poder-dot noBanc"></div>
+              <div class="dinero-poder-stat-info">
+                <div class="dinero-poder-stat-label">💵 No bancarizado</div>
+                <div class="dinero-poder-stat-value">${Formato.formatearMoneda(noBancarizado, moneda)}</div>
+                <div class="dinero-poder-stat-meta">${pctNoBanc.toFixed(0)}% del total · Efectivo y billeteras</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    },
+    
     renderPortfolio() {
       const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
       const patrimonio = API.calcularPatrimonioCredito(moneda);

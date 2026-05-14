@@ -532,6 +532,39 @@ const API = {
     return Formato.sumarEnMoneda(items, monedaDestino);
   },
   
+  /**
+   * v14 — Saldo total bancarizado (solo cuentas marcadas como bancarizadas)
+   */
+  calcularSaldoBancarizado(monedaDestino = 'PEN') {
+    const cuentas = this.obtenerCuentas().filter(c => 
+      c.tipo !== 'credito' && c.bancarizado === true
+    );
+    const items = cuentas.map(c => ({ monto: c.saldo, moneda: c.moneda }));
+    return Formato.sumarEnMoneda(items, monedaDestino);
+  },
+  
+  /**
+   * v14 — Saldo total NO bancarizado (efectivo, Prex, etc.)
+   */
+  calcularSaldoNoBancarizado(monedaDestino = 'PEN') {
+    const cuentas = this.obtenerCuentas().filter(c => 
+      c.tipo !== 'credito' && c.bancarizado === false
+    );
+    const items = cuentas.map(c => ({ monto: c.saldo, moneda: c.moneda }));
+    return Formato.sumarEnMoneda(items, monedaDestino);
+  },
+  
+  /**
+   * v14 — Cuentas filtradas por bancarización
+   * @param {string} filtro - 'todas' | 'bancarizado' | 'no_bancarizado'
+   */
+  obtenerCuentasPorBancarizacion(filtro = 'todas') {
+    const cuentas = this.obtenerCuentas().filter(c => c.tipo !== 'credito');
+    if (filtro === 'bancarizado') return cuentas.filter(c => c.bancarizado === true);
+    if (filtro === 'no_bancarizado') return cuentas.filter(c => c.bancarizado === false);
+    return cuentas;
+  },
+  
   calcularIngresosMes(monedaDestino = 'PEN') {
     const ahora = new Date();
     const trans = this.obtenerTransacciones({

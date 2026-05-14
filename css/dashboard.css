@@ -2480,3 +2480,144 @@
   font-weight: 700;
   flex-shrink: 0;
 }
+
+/* ============================================
+   v14 — Toggle bancarización
+   ============================================ */
+.bancarizacion-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--card-bg-secondary);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-full);
+  padding: 4px;
+}
+
+.banc-toggle-btn {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.banc-toggle-btn:hover {
+  color: var(--text-primary);
+  background: rgba(20, 240, 205, 0.08);
+}
+
+.banc-toggle-btn.active {
+  background: linear-gradient(135deg, #14F0CD, #06B6D4);
+  color: #0A0E1A;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(20, 240, 205, 0.3);
+}
+
+/* ============================================
+   v14 — Card "Dinero en tu poder"
+   ============================================ */
+.dinero-poder-card {
+  background: linear-gradient(135deg, rgba(20, 240, 205, 0.08), rgba(6, 182, 212, 0.04));
+  border: 1px solid rgba(20, 240, 205, 0.25);
+}
+
+.dinero-poder-total {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 8px 0 12px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dinero-poder-barra {
+  display: flex;
+  height: 8px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  margin-bottom: 12px;
+}
+
+.dinero-poder-banc {
+  background: linear-gradient(90deg, #14F0CD, #06B6D4);
+  transition: width 0.5s ease;
+}
+
+.dinero-poder-noBanc {
+  background: linear-gradient(90deg, #F59E0B, #EA580C);
+  transition: width 0.5s ease;
+}
+
+.dinero-poder-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dinero-poder-stat {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: var(--card-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.dinero-poder-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.dinero-poder-dot.banc {
+  background: #14F0CD;
+}
+
+.dinero-poder-dot.noBanc {
+  background: #F59E0B;
+}
+
+.dinero-poder-stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dinero-poder-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.dinero-poder-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 2px;
+}
+
+.dinero-poder-stat-meta {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 900px) {
+  .bancarizacion-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+  .banc-toggle-btn {
+    flex: 1;
+    text-align: center;
+  }
+}
