@@ -1,6 +1,20 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
+   v14c — Hotfix slider + comentarios:
+   - SLIDER ARREGLADO: ahora se llama configurarSlider() en el render
+     (estaba definida pero nunca se llamaba — bug introducido en v13)
+   - Slider funciona INFINITO (loop continuo en ambas direcciones)
+   - Autoplay cada 5 segundos (TARJETAS_AUTOPLAY_MS)
+   - Autoplay pausa al hover, reinicia al sacar mouse
+   - Código del dashboard COMENTADO en español para fácil modificación:
+     · Estado documentado (cada variable explicada)
+     · Métodos render documentados (qué hace, parámetros)
+     · Métodos del slider documentados paso a paso
+     · Métodos de filtros documentados
+   
+   v14b — Hotfix slider tarjetas (deprecado, fallaba el slider):
+   
    v14 — Cambios:
    - Concepto "Bancarizado vs No bancarizado" agregado
    - Campo `bancarizado` (boolean) en cada cuenta
