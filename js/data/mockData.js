@@ -16,7 +16,7 @@ const MockData = {
   
   cuentas: [
     { id: 1, nombre: 'Efectivo',          tipo: 'efectivo',  moneda: 'PEN', saldo: 0.0,     activo: true, color: 'green',  icono: '💵', bancarizado: false },
-    { id: 2, nombre: 'Interbank S/',      tipo: 'debito',    moneda: 'PEN', saldo: 2000,    activo: true, color: 'green',  icono: '🏦', bancarizado: true, esPrincipal: true },
+    { id: 2, nombre: 'Interbank S/',      tipo: 'debito',    moneda: 'PEN', saldo: 0.0,    activo: true, color: 'green',  icono: '🏦', bancarizado: true, esPrincipal: true },
     { id: 3, nombre: 'Plin - INTERBANK',  tipo: 'billetera', moneda: 'PEN', saldo: 0.0,     activo: true, color: 'green',  icono: '📱', bancarizado: true, cuentaVinculadaId: 2 },
     { id: 4, nombre: 'BBVA S/',           tipo: 'debito',    moneda: 'PEN', saldo: 0.0,     activo: true, color: 'blue',   icono: '🏦', bancarizado: true },
     { id: 5, nombre: 'Plin - BBVA',       tipo: 'billetera', moneda: 'PEN', saldo: 0.0,     activo: true, color: 'skyblue',icono: '📱', bancarizado: true, cuentaVinculadaId: 4 },
@@ -34,28 +34,28 @@ const MockData = {
     {
       id: 1, cuentaId: 10, nombre: 'Interbank TC', banco: 'INTERBANK',
       titular: 'NEYO 1', ultimosDigitos: '4521', fechaExpiracion: '08/28',
-      marca: 'VISA', moneda: 'PEN', lineaCredito: 1400, saldoUsado: 120,
+      marca: 'VISA', moneda: 'PEN', lineaCredito: 1400, saldoUsado: 0,
       diaCorte: 6, diaPago: 2, tasaTEA: 0.85, colorTema: 'green',
       descripcion: 'Tarjeta de credito IBK',
     },
     {
       id: 2, cuentaId: 11, nombre: 'BBVA TC', banco: 'INTERBANK',
       titular: 'Neyo 2', ultimosDigitos: '8932', fechaExpiracion: '03/27',
-      marca: 'MASTERCARD', moneda: 'PEN', lineaCredito: 2900, saldoUsado: 100,
+      marca: 'MASTERCARD', moneda: 'PEN', lineaCredito: 2900, saldoUsado: 0,
       diaCorte: 10, diaPago: 5, tasaTEA: 0.45, colorTema: 'blue',
       descripcion: 'TC DE BBVA',
     },
     {
       id: 3, cuentaId: 12, nombre: 'BCP TC', banco: 'BCP',
       titular: 'Neyo 3', ultimosDigitos: '8932', fechaExpiracion: '03/27',
-      marca: 'VISA', moneda: 'PEN', lineaCredito: 6500, saldoUsado: 220,
+      marca: 'VISA', moneda: 'PEN', lineaCredito: 6500, saldoUsado: 0,
       diaCorte: 5, diaPago: 10, tasaTEA: 0.45, colorTema: 'blue',
       descripcion: 'TC DE BCP',
     },
     {
       id: 4, cuentaId: 13, nombre: 'OH / SIP ', banco: 'OH',
       titular: 'Neyo 4', ultimosDigitos: '8932', fechaExpiracion: '03/27',
-      marca: 'VISA', moneda: 'PEN', lineaCredito: 16500, saldoUsado: 520,
+      marca: 'VISA', moneda: 'PEN', lineaCredito: 16500, saldoUsado: 0,
       diaCorte: 4, diaPago: 2, tasaTEA: 0.45, colorTema: 'amber',
       descripcion: 'TC DE OH / SIP',
     },
@@ -119,12 +119,39 @@ const MockData = {
   ],
   
   transacciones: [
-    { id: 1, cuentaId: 2, categoriaId: 11, tipo: 'egreso', monto: 145.30, moneda: 'PEN', descripcion: 'Plaza Vea', fecha: '2025-05-05', esCredito: false },
-    //{ id: 2, cuentaId: 2, categoriaId: 100, tipo: 'ingreso', monto: 4800, moneda: 'PEN', descripcion: 'Sueldo Mayo', fecha: '2025-05-04', esCredito: false },
-    //{ id: 3, cuentaId: 5, categoriaId: 51, tipo: 'egreso', monto: 44.90, moneda: 'PEN', descripcion: 'Netflix', fecha: '2025-05-02', esCredito: true, tarjetaId: 1 },
-    //{ id: 4, cuentaId: 1, categoriaId: 22, tipo: 'egreso', monto: 18.50, moneda: 'PEN', descripcion: 'Uber', fecha: '2025-05-01', esCredito: false },
-    //{ id: 5, cuentaId: 6, categoriaId: 52, tipo: 'egreso', monto: 9.99, moneda: 'USD', descripcion: 'Spotify Premium', fecha: '2025-04-30', esCredito: true, tarjetaId: 2 },
-    //{ id: 6, cuentaId: 2, categoriaId: 41, tipo: 'egreso', monto: 89.00, moneda: 'PEN', descripcion: 'Recibo de luz', fecha: '2025-04-28', esCredito: false },
+    // 1. INGRESO BANCARIZADO - Sueldo a Interbank
+    { 
+      id: 1, cuentaId: 2, categoriaId: 100, tipo: 'ingreso', monto: 2877.58, moneda: 'PEN', descripcion: 'Saldo de marzo', notas: 'Pago de empresa',
+      fecha: '2026-04-01', esCredito: false 
+    },
+    { 
+      id: 2, cuentaId: 2, categoriaId: 100, tipo: 'egreso', monto: 1168.84, moneda: 'PEN', descripcion: 'Gasto total', notas: 'Pago de empresa',
+      fecha: '2026-04-15', esCredito: false 
+    },
+    
+    // 2. INGRESO NO BANCARIZADO - Regalo en efectivo
+    //{ 
+    //  id: 2, cuentaId: 1, categoriaId: 103, tipo: 'ingreso', monto: 200, moneda: 'PEN', descripcion: 'Regalo cumpleaños', notas: 'Tía Rosa - cumpleaños',
+    //  fecha: '2026-05-03', esCredito: false 
+    //},
+    //
+    //// 3. EGRESO BANCARIZADO - Compra supermercado con débito
+    //{ 
+    //  id: 3, cuentaId: 2, categoriaId: 11, tipo: 'egreso', monto: 145.30, moneda: 'PEN', descripcion: 'Plaza Vea', notas: '',
+    //  fecha: '2026-05-05', esCredito: false 
+    //},
+    //
+    //// 4. EGRESO NO BANCARIZADO - Almuerzo en efectivo
+    //{ 
+    //  id: 4, cuentaId: 1, categoriaId: 12, tipo: 'egreso', monto: 25, moneda: 'PEN', descripcion: 'Almuerzo menú', notas: 'Chifa del barrio',
+    //  fecha: '2026-05-08', esCredito: false 
+    //},
+    //
+    //// 5. EGRESO CON TARJETA DE CRÉDITO - Netflix
+    //{ 
+    //  id: 5, cuentaId: 10, categoriaId: 51, tipo: 'egreso', monto: 44.90, moneda: 'PEN', descripcion: 'Netflix', notas: 'Suscripción mensual',
+    //  fecha: '2026-05-10', esCredito: true, tarjetaId: 1 
+    //},
   ],
   
   presupuestos: [
