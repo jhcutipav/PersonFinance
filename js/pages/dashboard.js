@@ -1,26 +1,89 @@
-  /* ============================================
-    PÁGINA: DASHBOARD (Estilo referencia Cryptoline)
-    ============================================ */
+  /* ============================================================================
+     PÁGINA: DASHBOARD
+     ============================================================================
+     Esta es la página principal de la app. Muestra:
+       - Saludo + Resumen General (saldo, ingresos, egresos, gráfico)
+       - Slider de tarjetas + resumen de la tarjeta activa
+       - Tabla de actividad reciente
+       - Aside derecho con: Dinero en tu poder, Línea de crédito,
+         Mis cuentas, Próximos pagos
+     
+     Estructura del archivo:
+       1. ESTADO (Dashboard.tarjetaActiva, monedaVista, etc.)
+       2. MÉTODOS DE RENDER (cómo se dibuja cada parte)
+       3. MÉTODOS DE EVENTOS (qué pasa al hacer click)
+       4. MÉTODOS DE CÁLCULO (cómo se calculan stats)
+       5. MÉTODOS DEL SLIDER (la lógica del carrusel de tarjetas)
+     ============================================================================ */
 
   const Dashboard = {
     
+    /* ============================================================
+       ESTADO — variables que recuerda el dashboard mientras está abierto
+       ============================================================ */
+    
+    // Índice de la tarjeta activa en el slider (0 = primera, 1 = segunda, etc.)
     tarjetaActiva: 0,
+    
+    // Moneda que se está mostrando ('PEN' o 'USD')
     monedaVista: 'PEN',
-    tabActiva: 'activity', // activity | spending | income
-    historyTab: 'history', // history | upcoming
-    filtroActividad: 'todas', // 'todas' | 'cuenta_X' | 'tarjeta_X'
+    
+    // Tab activa del resumen (legacy, usado en versiones anteriores)
+    tabActiva: 'activity',
+    
+    // Tab del historial: 'history' (pasadas) o 'upcoming' (próximas)
+    historyTab: 'history',
+    
+    // Filtro del histórico inferior: 'todas' o 'cuenta_X' o 'tarjeta_X'
+    filtroActividad: 'todas',
+    
+    // Índice del gráfico activo en el slider de gráficos (no usado en v13+)
     graficoTipoActivo: 0,
     TIPOS_GRAFICO: ['linea', 'barras', 'donut', 'radial', 'pie', 'polar', 'stacked', 'area'],
+    
+    // Setinterval del autoplay del slider de gráficos
     autoplayInterval: null,
+    
+    // Cada cuánto cambia el slider de gráficos (15 segundos)
     AUTOPLAY_MS: 15000,
     
-    // v13 — Estado del Resumen General
-    resumenFiltro: 'todas',  // 'todas' | 'cuenta_X' | 'tarjeta_X'
-    resumenMes: null,  // null = mes actual, o {mes, anio}
+    // Cada cuánto cambia el slider de tarjetas (5 segundos)
+    TARJETAS_AUTOPLAY_MS: 5000,
     
+    /* ============================================================
+       ESTADO del Resumen General (la card grande con stats + gráfico)
+       ============================================================ */
+    
+    // Filtro de cuenta: 'todas' | 'cuenta_2' (id) | 'tarjeta_5' (id)
+    resumenFiltro: 'todas',
+    
+    // Mes que se está viendo: null = mes actual, o {mes: 4, anio: 2026}
+    resumenMes: null,
+    
+    // Filtro de bancarización: 'todas' | 'bancarizado' | 'no_bancarizado'
+    resumenBancarizacion: 'todas',
+    
+    /* ============================================================
+       MÉTODO PRINCIPAL — se llama cada vez que se entra al dashboard
+       ============================================================ */
+    
+    /**
+     * render — Dibuja todo el dashboard.
+     * 
+     * Es el "punto de entrada" de la página. Lo llama el router (App.js)
+     * cuando el usuario va al dashboard.
+     * 
+     * @param {HTMLElement} container - dónde dibujar (usualmente #pageContent)
+     * @param {string} monedaVista - 'PEN' o 'USD' (cuál mostrar)
+     * 
+     * Hace 3 pasos:
+     *   1. Genera el HTML completo del dashboard
+     *   2. setTimeout: una vez en el DOM, dibuja los gráficos y arma el slider
+     *   3. Engancha eventos (clicks en filtros, navegación, etc.)
+     */
     render(container, monedaVista = 'PEN') {
       this.monedaVista = monedaVista;
-      Graficos.destruirTodos();
+      Graficos.destruirTodos(); // Limpia gráficos anteriores
       
       // Limpiar autoplay anterior si existía
       if (this.autoplayInterval) {
@@ -46,6 +109,7 @@
           </div>
           
           <aside class="dashboard-aside">
+            ${this.renderDineroEnPoder()}
             ${this.renderPortfolio()}
             ${this.renderFavorites()}
             ${this.renderUpcoming()}
@@ -54,14 +118,15 @@
       `;
       
       setTimeout(() => {
-        this.renderChartResumenGeneral();  // v13 — nuevo gráfico
-        this.renderSparklinesFavorites();
-        this.renderChartResumenTarjeta();
-        this.renderChartUsoTarjetas();     // v13 — donut con uso de cada tarjeta
+        this.renderChartResumenGeneral();  // Gráfico del Resumen General
+        this.renderSparklinesFavorites();  // Mini-gráficos de las cards del aside
+        this.renderChartResumenTarjeta();  // Mini-gráfico de evolución de la tarjeta activa
+        this.renderChartUsoTarjetas();     // Donut con uso de cada tarjeta
+        this.configurarSlider();           // 🎯 Activa el slider de tarjetas (¡no quitar!)
       }, 50);
       
       this.configurarEventos();
-      this.configurarEventosResumenGeneral();  // v13
+      this.configurarEventosResumenGeneral();
     },
     
     /* ============ SALUDO ============ */
@@ -109,16 +174,32 @@
        │  └──────────────────────────────────────────┘   │
        └─────────────────────────────────────────────────┘
        ============================================ */
+    /**
+     * renderResumenGeneral — Dibuja el card grande del dashboard.
+     * 
+     * Este card contiene:
+     *   - Selector de cuenta/tarjeta (filtro)
+     *   - Toggle bancarización (Todo / Bancarizado / No bancarizado)
+     *   - Navegador de mes (flechas ‹ › + click para volver al mes actual)
+     *   - 3 stats grandes: Saldo, Ingresos, Egresos
+     *   - Gráfico de 3 líneas (saldo, ingresos, egresos acumulados por día)
+     * 
+     * NOTA: Esta función SOLO genera el HTML. El gráfico se dibuja después
+     * en renderChartResumenGeneral() (porque Chart.js necesita el canvas en el DOM).
+     * 
+     * @returns {string} HTML del card
+     */
     renderResumenGeneral() {
       const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
       
       // Determinar mes/año a mostrar
+      // Si this.resumenMes es null, usar el mes actual; si tiene valor, usar ese
       const ahora = new Date();
       const mes = this.resumenMes ? this.resumenMes.mes : ahora.getMonth();
       const anio = this.resumenMes ? this.resumenMes.anio : ahora.getFullYear();
       const esMesActual = mes === ahora.getMonth() && anio === ahora.getFullYear();
       
-      // Calcular stats según filtro y mes
+      // Calcular los 3 stats grandes (saldo, ingresos, egresos)
       const stats = this.calcularStatsResumen(mes, anio, moneda);
       
       // Obtener cuentas y tarjetas para el selector
@@ -166,6 +247,19 @@
                   </optgroup>
                 ` : ''}
               </select>
+            </div>
+            
+            <!-- v14 — Toggle de bancarización -->
+            <div class="bancarizacion-toggle">
+              <button class="banc-toggle-btn ${this.resumenBancarizacion === 'todas' ? 'active' : ''}" data-banc="todas">
+                📊 Todo
+              </button>
+              <button class="banc-toggle-btn ${this.resumenBancarizacion === 'bancarizado' ? 'active' : ''}" data-banc="bancarizado">
+                🏦 Bancarizado
+              </button>
+              <button class="banc-toggle-btn ${this.resumenBancarizacion === 'no_bancarizado' ? 'active' : ''}" data-banc="no_bancarizado">
+                💵 No bancarizado
+              </button>
             </div>
             
             <!-- Selector de mes (con flechas) -->
@@ -240,10 +334,30 @@
     },
     
     /**
-     * v13 — Calcula los 3 stats principales aplicando filtro y mes
+     * calcularStatsResumen — Calcula los 3 stats del Resumen General.
+     * 
+     * Devuelve los totales del mes aplicando los 3 filtros activos:
+     *   - Cuenta/tarjeta específica (this.resumenFiltro)
+     *   - Bancarización (this.resumenBancarizacion)
+     *   - Mes y año (parámetros mes, anio)
+     * 
+     * @param {number} mes - mes (0-11, donde 0=enero)
+     * @param {number} anio - año (ej: 2026)
+     * @param {string} moneda - 'PEN' o 'USD' para convertir todo
+     * @returns {object} { saldo, ingresos, egresos }
+     * 
+     * NOTA: El saldo NO se filtra por mes (es siempre el saldo actual).
+     * Los ingresos y egresos SÍ se filtran por mes.
      */
     calcularStatsResumen(mes, anio, moneda) {
       const todasTrans = API.obtenerTransacciones({ incluirTransferencias: false });
+      
+      // Pre-filtrar por bancarización (solo aplica si no hay filtro de cuenta específica)
+      let cuentasBancFiltradas = null;
+      if (this.resumenBancarizacion !== 'todas' && this.resumenFiltro === 'todas') {
+        const cuentasFiltradas = API.obtenerCuentasPorBancarizacion(this.resumenBancarizacion);
+        cuentasBancFiltradas = new Set(cuentasFiltradas.map(c => c.id));
+      }
       
       // Filtrar por filtro de cuenta/tarjeta
       let trans = todasTrans;
@@ -253,6 +367,9 @@
       } else if (this.resumenFiltro.startsWith('tarjeta_')) {
         const id = parseInt(this.resumenFiltro.split('_')[1]);
         trans = trans.filter(t => t.tarjetaId === id);
+      } else if (cuentasBancFiltradas) {
+        // v14 — Filtro por bancarización
+        trans = trans.filter(t => cuentasBancFiltradas.has(t.cuentaId));
       }
       
       // Filtrar por mes/año
@@ -272,7 +389,14 @@
       // Saldo: depende del filtro
       let saldo;
       if (this.resumenFiltro === 'todas') {
-        saldo = API.calcularSaldoTotal(moneda);
+        // v14 — Aplicar bancarización si está activa
+        if (this.resumenBancarizacion === 'bancarizado') {
+          saldo = API.calcularSaldoBancarizado(moneda);
+        } else if (this.resumenBancarizacion === 'no_bancarizado') {
+          saldo = API.calcularSaldoNoBancarizado(moneda);
+        } else {
+          saldo = API.calcularSaldoTotal(moneda);
+        }
       } else if (this.resumenFiltro.startsWith('cuenta_')) {
         const id = parseInt(this.resumenFiltro.split('_')[1]);
         const cuenta = API.obtenerCuentaPorId(id);
@@ -575,10 +699,24 @@
           this.refrescarResumenGeneral();
         });
       }
+      
+      // v14 — Toggle bancarización
+      document.querySelectorAll('[data-banc]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.resumenBancarizacion = btn.dataset.banc;
+          this.refrescarResumenGeneral();
+        });
+      });
     },
     
     /**
-     * v13 — Cambiar filtro de cuenta/tarjeta del resumen
+     * cambiarFiltroResumen — Cambia el filtro de cuenta/tarjeta del resumen.
+     * 
+     * Lo llaman:
+     *   - El <select> del filtro (cuando eliges una cuenta)
+     *   - El botón ✕ del badge de filtro activo (limpia el filtro)
+     * 
+     * @param {string} nuevoFiltro - 'todas' | 'cuenta_X' | 'tarjeta_X'
      */
     cambiarFiltroResumen(nuevoFiltro) {
       this.resumenFiltro = nuevoFiltro;
@@ -586,7 +724,17 @@
     },
     
     /**
-     * v13 — Cambiar mes del resumen (delta = -1 anterior, +1 siguiente)
+     * cambiarMesResumen — Navega entre meses en el resumen.
+     * 
+     * Lo llaman las flechas ‹ › del navegador de mes:
+     *   - Flecha ‹ → delta = -1 (mes anterior)
+     *   - Flecha › → delta = +1 (mes siguiente)
+     * 
+     * Si delta lleva más allá del mes actual, NO permite (return temprano).
+     * Si delta lleva justo al mes actual, resetea this.resumenMes a null
+     * (que significa "modo automático: mes actual").
+     * 
+     * @param {number} delta - cuántos meses moverse (-1, +1, etc.)
      */
     cambiarMesResumen(delta) {
       const ahora = new Date();
@@ -596,17 +744,18 @@
       let nuevoMes = mesActual + delta;
       let nuevoAnio = anioActual;
       
+      // Si nos pasamos de diciembre o vamos antes de enero, ajustar año
       if (nuevoMes < 0) { nuevoMes = 11; nuevoAnio--; }
       else if (nuevoMes > 11) { nuevoMes = 0; nuevoAnio++; }
       
-      // No permitir ir más allá del mes actual
+      // No permitir ir más allá del mes actual (futuro)
       const ahoraMes = ahora.getMonth();
       const ahoraAnio = ahora.getFullYear();
       if (nuevoAnio > ahoraAnio || (nuevoAnio === ahoraAnio && nuevoMes > ahoraMes)) {
         return;
       }
       
-      // Si llegamos al mes actual, resetear a null
+      // Si llegamos al mes actual, resetear a null (modo automático)
       if (nuevoMes === ahoraMes && nuevoAnio === ahoraAnio) {
         this.resumenMes = null;
       } else {
@@ -617,15 +766,17 @@
     },
     
     /**
-     * v13 — Refrescar solo la sección del Resumen General (no todo el dashboard)
+     * refrescarResumenGeneral — Re-renderiza todo el dashboard.
+     * 
+     * Se llama después de cambiar un filtro (cuenta, mes, bancarización)
+     * para que todos los stats y gráficos reflejen el cambio.
+     * 
+     * NOTA: Actualmente re-renderiza TODO el dashboard, no solo el card.
+     * Esto es porque otros bloques (tabla de actividad reciente, aside)
+     * también pueden depender del filtro. Si en el futuro quieres optimizar,
+     * podrías re-renderizar solo el card de Resumen General.
      */
     refrescarResumenGeneral() {
-      // Re-render del card
-      const layout = document.querySelector('.dashboard-main');
-      if (!layout) return;
-      
-      // Re-renderizar todo el dashboard para que la tabla de Recent Activity 
-      // también respete el filtro si es necesario
       const container = document.getElementById('pageContent');
       if (container) {
         this.render(container, this.monedaVista);
@@ -980,85 +1131,180 @@
       return 'is-far-next';
     },
     
+    /* ============================================================
+       SLIDER DE TARJETAS — Documentación general
+       ============================================================
+       Este slider muestra las tarjetas en el dashboard. Funciona así:
+       
+       1. Hay un "carrusel" de tarjetas en HTML (div con clase .cards-slider)
+       2. Solo UNA tarjeta es la "activa" (la grande del centro)
+       3. Las otras tarjetas están a los costados, más pequeñas
+       4. Al hacer click en flechas ‹ › o en dots, cambia cuál es la activa
+       5. Cada 5 segundos cambia sola (autoplay)
+       6. Es INFINITO: después de la última vuelve a la primera
+       
+       Variables clave en el estado:
+       - this.tarjetaActiva: índice de la tarjeta activa (0, 1, 2...)
+       - this._tarjetasAutoplay: el setInterval del autoplay (para poder pausarlo)
+       - this.TARJETAS_AUTOPLAY_MS: cada cuántos milisegundos cambia (5000 = 5s)
+       ============================================================ */
+    
+    /**
+     * configurarSlider — Inicializa el slider de tarjetas del dashboard.
+     * 
+     * Hace 3 cosas principales:
+     *   1. Define una función interna `irASlide(index)` que es el "motor"
+     *      del slider: recibe el índice y actualiza toda la UI.
+     *   2. Engancha eventos: clicks en flechas, dots, slides, swipe táctil.
+     *   3. Arranca el autoplay (cambio automático cada 5s).
+     * 
+     * ⚠️ IMPORTANTE: esta función se llama UNA VEZ al renderizar el dashboard.
+     * Si la olvidas de llamar, el slider queda muerto (sin eventos).
+     */
     configurarSlider() {
+      // 1. Buscar el contenedor del slider en el DOM
       const track = document.getElementById('cardsTrack');
-      if (!track) return;
+      if (!track) return; // No hay slider en pantalla (otra página)
       
+      // 2. Obtener las tarjetas del usuario
       const tarjetas = API.obtenerTarjetas();
-      if (tarjetas.length === 0) return;
+      if (tarjetas.length === 0) return; // No hay tarjetas, no hay slider
       
-      const btnPrev = document.getElementById('cardPrev');
-      const btnNext = document.getElementById('cardNext');
-      const indicators = document.querySelectorAll('.indicator-dot');
+      // 3. Referencias a los botones y dots
+      const btnPrev = document.getElementById('cardPrev');  // Flecha ‹
+      const btnNext = document.getElementById('cardNext');  // Flecha ›
+      const indicators = document.querySelectorAll('.indicator-dot'); // Los puntitos
       
+      // 4. Total de tarjetas (lo usamos en el módulo para el loop infinito)
+      const total = tarjetas.length;
+      
+      /**
+       * irASlide(index) — Cambia la tarjeta activa.
+       * 
+       * @param {number} index - índice de la tarjeta destino (puede ser negativo
+       *   o mayor que total, el cálculo de módulo lo normaliza para loop infinito)
+       * 
+       * Trabaja en 4 pasos:
+       *   1. Normaliza el índice: si pasa el final vuelve a 0, si va negativo
+       *      vuelve al último. Esto se hace con: ((index % total) + total) % total
+       *      Ejemplo con total=4: -1 → 3, 0 → 0, 4 → 0, 5 → 1
+       *   2. Guarda el nuevo índice en this.tarjetaActiva
+       *   3. Actualiza las clases CSS de las tarjetas (cuál es activa, prev, next)
+       *   4. Actualiza el resumen lateral derecho con los datos de la nueva tarjeta
+       */
       const irASlide = (index) => {
-        if (index < 0 || index >= tarjetas.length) return;
-        this.tarjetaActiva = index;
-        this.actualizarClasesSlides(tarjetas.length);
-        indicators.forEach((dot, i) => dot.classList.toggle('active', i === index));
-        if (btnPrev) btnPrev.disabled = (index === 0);
-        if (btnNext) btnNext.disabled = (index === tarjetas.length - 1);
+        // Paso 1: Loop infinito con módulo
+        index = ((index % total) + total) % total;
         
-        // v0.10.1 — actualizar resumen lateral
+        // Paso 2: Guardar índice activo
+        this.tarjetaActiva = index;
+        
+        // Paso 3: Actualizar UI (clases CSS de cada tarjeta y dots activos)
+        this.actualizarClasesSlides(total);
+        indicators.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        
+        // Paso 4: Refrescar el resumen lateral (panel derecho con info de la tarjeta)
         const resumenSide = document.getElementById('tarjetaResumenSide');
         if (resumenSide) {
           resumenSide.innerHTML = this.renderResumenTarjetaActiva();
+          // Redibuja el mini-gráfico de evolución después de un pequeño delay
           setTimeout(() => this.renderChartResumenTarjeta(), 30);
         }
       };
       
-      if (btnPrev) btnPrev.addEventListener('click', () => { irASlide(this.tarjetaActiva - 1); this.resetTarjetasAutoplay(); });
-      if (btnNext) btnNext.addEventListener('click', () => { irASlide(this.tarjetaActiva + 1); this.resetTarjetasAutoplay(); });
+      // 5. Engancha el click en la flecha izquierda (anterior)
+      if (btnPrev) {
+        btnPrev.addEventListener('click', () => {
+          irASlide(this.tarjetaActiva - 1);  // Ir a la tarjeta anterior
+          this.reiniciarAutoplay(irASlide);   // Reinicia el autoplay
+        });
+      }
       
+      // 6. Engancha el click en la flecha derecha (siguiente)
+      if (btnNext) {
+        btnNext.addEventListener('click', () => {
+          irASlide(this.tarjetaActiva + 1);  // Ir a la tarjeta siguiente
+          this.reiniciarAutoplay(irASlide);
+        });
+      }
+      
+      // 7. Engancha click en cada dot (punto indicador)
       indicators.forEach(dot => {
-        dot.addEventListener('click', () => { 
-          irASlide(parseInt(dot.dataset.slide, 10)); 
-          this.resetTarjetasAutoplay();
+        dot.addEventListener('click', () => {
+          const idx = parseInt(dot.dataset.slide, 10);
+          irASlide(idx);
+          this.reiniciarAutoplay(irASlide);
         });
       });
       
+      // 8. Engancha click en las tarjetas NO activas (para llevarlas al centro)
       track.querySelectorAll('.card-slide').forEach(slide => {
         slide.addEventListener('click', () => {
-          if (slide.classList.contains('is-active')) return;
-          irASlide(parseInt(slide.dataset.index, 10));
-          this.resetTarjetasAutoplay();
+          if (slide.classList.contains('is-active')) return; // Si ya es la activa, no hacer nada
+          const idx = parseInt(slide.dataset.index, 10);
+          irASlide(idx);
+          this.reiniciarAutoplay(irASlide);
         });
       });
       
+      // 9. Soporte para swipe táctil en móvil
       let startX = 0;
-      track.addEventListener('touchstart', (e) => { startX = e.changedTouches[0].screenX; }, { passive: true });
-      track.addEventListener('touchend', (e) => {
-        const diff = startX - e.changedTouches[0].screenX;
-        if (Math.abs(diff) < 50) return;
-        if (diff > 0 && this.tarjetaActiva < tarjetas.length - 1) irASlide(this.tarjetaActiva + 1);
-        else if (diff < 0 && this.tarjetaActiva > 0) irASlide(this.tarjetaActiva - 1);
-        this.resetTarjetasAutoplay();
+      track.addEventListener('touchstart', (e) => {
+        startX = e.changedTouches[0].screenX;
       }, { passive: true });
       
-      if (btnPrev) btnPrev.disabled = (this.tarjetaActiva === 0);
-      if (btnNext) btnNext.disabled = (this.tarjetaActiva === tarjetas.length - 1);
+      track.addEventListener('touchend', (e) => {
+        const diff = startX - e.changedTouches[0].screenX;
+        if (Math.abs(diff) < 50) return; // Movimiento muy corto, ignorar
+        if (diff > 0) irASlide(this.tarjetaActiva + 1); // Swipe a la izquierda → siguiente
+        else irASlide(this.tarjetaActiva - 1);          // Swipe a la derecha → anterior
+        this.reiniciarAutoplay(irASlide);
+      }, { passive: true });
       
-      // Auto-play del slider de tarjetas (15s)
-      if (tarjetas.length > 1) {
-        this.iniciarTarjetasAutoplay(tarjetas.length, irASlide);
+      // 10. Iniciar autoplay (solo si hay más de 1 tarjeta)
+      if (total > 1) {
+        this.iniciarTarjetasAutoplay(irASlide);
         
-        // Pausa al hover
+        // 11. Pausar autoplay cuando el mouse está sobre el slider
         const slider = document.querySelector('.cards-slider');
         if (slider) {
           slider.addEventListener('mouseenter', () => this.pausarTarjetasAutoplay());
-          slider.addEventListener('mouseleave', () => this.iniciarTarjetasAutoplay(tarjetas.length, irASlide));
+          slider.addEventListener('mouseleave', () => this.iniciarTarjetasAutoplay(irASlide));
         }
       }
+      
+      // 12. Guardar referencia a irASlide para poder usarlo desde otros métodos
+      this._irASlideTarjeta = irASlide;
     },
     
-    iniciarTarjetasAutoplay(total, irASlide) {
-      this.pausarTarjetasAutoplay();
+    /**
+     * iniciarTarjetasAutoplay — Arranca el cambio automático del slider.
+     * 
+     * @param {function} irASlide - función que cambia de tarjeta
+     * 
+     * Cada this.TARJETAS_AUTOPLAY_MS milisegundos (default: 5000ms = 5s)
+     * llama a irASlide(siguiente) para pasar a la próxima tarjeta.
+     * 
+     * Antes de iniciar, pausa cualquier autoplay anterior (para no duplicar timers).
+     */
+    iniciarTarjetasAutoplay(irASlide) {
+      this.pausarTarjetasAutoplay(); // Limpiar autoplay anterior si existe
+      
+      // No se puede iniciar autoplay sin la función irASlide
+      if (!irASlide) return;
+      
       this._tarjetasAutoplay = setInterval(() => {
-        const next = (this.tarjetaActiva + 1) % total;
-        irASlide(next);
-      }, this.AUTOPLAY_MS);
+        // Llamar irASlide con el siguiente índice (el módulo lo hace circular)
+        irASlide(this.tarjetaActiva + 1);
+      }, this.TARJETAS_AUTOPLAY_MS);
     },
     
+    /**
+     * pausarTarjetasAutoplay — Detiene el cambio automático del slider.
+     * 
+     * Limpia el setInterval guardado en this._tarjetasAutoplay.
+     * Si no hay autoplay corriendo, no hace nada.
+     */
     pausarTarjetasAutoplay() {
       if (this._tarjetasAutoplay) {
         clearInterval(this._tarjetasAutoplay);
@@ -1066,9 +1312,20 @@
       }
     },
     
-    resetTarjetasAutoplay() {
-      // El próximo evento de mouseenter/leave del slider lo reiniciará si corresponde
+    /**
+     * reiniciarAutoplay — Pausa y vuelve a iniciar el autoplay.
+     * 
+     * Se usa cuando el usuario hace una interacción manual (click en flecha,
+     * dot, swipe). Pausamos para que no haga doble cambio en pocos segundos,
+     * y luego de 1 segundo lo volvemos a arrancar.
+     * 
+     * @param {function} irASlide - función que cambia de tarjeta
+     */
+    reiniciarAutoplay(irASlide) {
       this.pausarTarjetasAutoplay();
+      setTimeout(() => {
+        this.iniciarTarjetasAutoplay(irASlide);
+      }, 1000);
     },
     
     actualizarClasesSlides(total) {
@@ -2211,6 +2468,59 @@
     
     /* ============ ASIDE: PORTFOLIO ============ */
     /* v0.10.2 — Patrimonio rediseñado: solo línea de crédito con semáforo */
+    /**
+     * v14 — Card "Dinero en tu poder" 
+     * Muestra: total + desglose bancarizado/no bancarizado
+     */
+    renderDineroEnPoder() {
+      const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
+      const total = API.calcularSaldoTotal(moneda);
+      const bancarizado = API.calcularSaldoBancarizado(moneda);
+      const noBancarizado = API.calcularSaldoNoBancarizado(moneda);
+      
+      const pctBanc = total > 0 ? (bancarizado / total) * 100 : 0;
+      const pctNoBanc = total > 0 ? (noBancarizado / total) * 100 : 0;
+      
+      return `
+        <div class="aside-card dinero-poder-card">
+          <div class="aside-card-header">
+            <div class="aside-card-titles">
+              <div class="aside-card-title">💰 Dinero en tu poder</div>
+              <div class="aside-card-subtitle">Suma de todas tus cuentas</div>
+            </div>
+          </div>
+          
+          <div class="dinero-poder-total">${Formato.formatearMoneda(total, moneda)}</div>
+          
+          <!-- Barra de proporción -->
+          <div class="dinero-poder-barra">
+            <div class="dinero-poder-banc" style="width:${pctBanc}%;" title="${pctBanc.toFixed(1)}% bancarizado"></div>
+            <div class="dinero-poder-noBanc" style="width:${pctNoBanc}%;" title="${pctNoBanc.toFixed(1)}% no bancarizado"></div>
+          </div>
+          
+          <!-- Desglose -->
+          <div class="dinero-poder-stats">
+            <div class="dinero-poder-stat">
+              <div class="dinero-poder-dot banc"></div>
+              <div class="dinero-poder-stat-info">
+                <div class="dinero-poder-stat-label">🏦 Bancarizado</div>
+                <div class="dinero-poder-stat-value">${Formato.formatearMoneda(bancarizado, moneda)}</div>
+                <div class="dinero-poder-stat-meta">${pctBanc.toFixed(0)}% del total · Visible para SBS/SUNAT</div>
+              </div>
+            </div>
+            <div class="dinero-poder-stat">
+              <div class="dinero-poder-dot noBanc"></div>
+              <div class="dinero-poder-stat-info">
+                <div class="dinero-poder-stat-label">💵 No bancarizado</div>
+                <div class="dinero-poder-stat-value">${Formato.formatearMoneda(noBancarizado, moneda)}</div>
+                <div class="dinero-poder-stat-meta">${pctNoBanc.toFixed(0)}% del total · Efectivo y billeteras</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    },
+    
     renderPortfolio() {
       const moneda = this.monedaVista === 'ALL' ? 'PEN' : this.monedaVista;
       const patrimonio = API.calcularPatrimonioCredito(moneda);
@@ -2457,35 +2767,56 @@
       `;
     },
     
-    /* v0.10.2 — Toggle de expansión del aside */
+    /**
+     * toggleExpandido — Expande o colapsa una sección del aside derecho.
+     * 
+     * Lo llaman los botones "Ver más" en las cards del aside:
+     *   - Mis cuentas: muestra/oculta cuentas extras (después de las primeras 4)
+     *   - Mis tarjetas: muestra/oculta tarjetas extras
+     *   - Próximos pagos: muestra/oculta pagos extras
+     * 
+     * @param {string} seccion - 'cuentas' | 'tarjetas' | 'upcoming'
+     */
     toggleExpandido(seccion) {
       if (seccion === 'cuentas') this._cuentasExpandido = !this._cuentasExpandido;
       else if (seccion === 'tarjetas') this._tarjetasExpandido = !this._tarjetasExpandido;
       else if (seccion === 'upcoming') this._upcomingExpandido = !this._upcomingExpandido;
       
-      // Re-renderizar solo el aside (no todo el dashboard)
+      // Re-renderizar para que se vea el cambio
       const container = document.getElementById('pageContent');
       if (container) this.render(container, this.monedaVista);
     },
     
-    /* v0.10.3 — Marcar cuenta como principal (desmarca las demás) */
+    /**
+     * toggleCuentaPrincipal — Marca/desmarca una cuenta como principal.
+     * 
+     * La cuenta principal es la que aparece marcada con ⭐ en el aside.
+     * Solo puede haber UNA cuenta principal a la vez:
+     *   - Si la cuenta ya es principal, se desmarca.
+     *   - Si no era principal, se marca esta y se desmarcan las demás.
+     * 
+     * Lo llama el click en la estrella ☆/⭐ de cada cuenta en el aside.
+     * 
+     * @param {number} cuentaId - id de la cuenta a marcar/desmarcar
+     */
     toggleCuentaPrincipal(cuentaId) {
       const cuenta = API.obtenerCuentaPorId(cuentaId);
       if (!cuenta) return;
       
       if (cuenta.esPrincipal) {
-        // Desmarcar
+        // Ya era principal → desmarcar
         const cuentas = Storage.cargar('cuentas') || [];
         const idx = cuentas.findIndex(c => c.id === cuentaId);
         if (idx >= 0) cuentas[idx].esPrincipal = false;
         Storage.guardar('cuentas', cuentas);
         Modal.toast('Cuenta principal removida');
       } else {
-        // Marcar (desmarca las demás automáticamente)
+        // No era principal → marcar esta y desmarcar las demás
         API.marcarCuentaPrincipal(cuentaId);
         Modal.toast(`⭐ ${cuenta.nombre} ahora es tu cuenta principal`);
       }
       
+      // Re-renderizar para que se vea el cambio
       const container = document.getElementById('pageContent');
       if (container) this.render(container, this.monedaVista);
     },

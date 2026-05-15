@@ -1,22 +1,26 @@
 /* ============================================
    APP.JS - Punto de entrada
    ============================================
-   v13 — Cambios:
-   - Sidebar: quitada la flecha toggle, ahora el LOGO 💎 abre/cierra
-   - Reset de datos: triple-click pasa del logo al AVATAR del header
-   - Dashboard rediseñado:
-     · Nuevo card "Resumen general" ancho completo con:
-       - Filtro de cuenta/tarjeta (cambia todos los datos)
-       - Navegador de mes (flechas ‹ › + click para volver al actual)
-       - 3 stats grandes: Saldo, Ingresos, Egresos
-       - Gráfico de 3 líneas (Saldo/Ingresos/Egresos acumulados diarios)
-   - "Línea de crédito total" ahora muestra DONUT con % de uso 
-     de CADA tarjeta de crédito + leyenda lateral con colores semáforo
+   v16 — Wizard de Onboarding para cuentas nuevas
+   - Detecta cuentas nuevas vs invitado:
+     · Invitado: arranca con datos demo completos (MockData)
+     · Cuenta real: arranca VACÍA + muestra wizard de onboarding
+   - Wizard de 4 pasos:
+     1. Bienvenida + explicación
+     2. Cuentas (efectivo, banco, billetera) con campos completos:
+        nombre, tipo, moneda, saldo, banco, bancarizado, cuenta vinculada, color
+     3. Tarjetas (opcional, saltable): crédito o débito con sus campos
+     4. Resumen final con stats
+   - Botón "Saltar todo" con advertencia
+   - Categorías por defecto cargadas SIEMPRE
+   - Solo se muestra UNA VEZ (marca pendienteOnboarding=false al terminar)
+   
+   v15 — Etapa 9.1: Página de Login
    ============================================ */
 
-const APP_VERSION = '13';
+const APP_VERSION = '16';
 const APP_NAME = 'FinanzApp';
-const APP_BUILD = '2026-05-14';
+const APP_BUILD = '2026-05-15';
 
 const App = {
   
@@ -25,17 +29,61 @@ const App = {
     monedaVista: 'PEN',
   },
   
+  /**
+   * init — Punto de entrada de la app.
+   * 
+   * v15 — Ahora verifica sesión PRIMERO:
+   *   - Si NO hay sesión → muestra Login (oculta app)
+   *   - Si SÍ hay sesión → arranca normal
+   */
   init() {
     console.log(`%c💎 ${APP_NAME} v${APP_VERSION}`, 'background:linear-gradient(135deg,#14F0CD,#06B6D4);color:#0A0E1A;padding:6px 12px;border-radius:6px;font-weight:700;');
     console.log(`Build: ${APP_BUILD}`);
     
-    // 1. Tema (lo primero para que no haya parpadeo)
+    // 1. Tema primero (evita parpadeo)
     Theme.init();
     
-    // 2. Storage
+    // v16 — 2. Auth ANTES de Storage (porque Storage.inicializar() ahora
+    // depende de saber si es invitado o cuenta real)
+    if (typeof Auth !== 'undefined' && !Auth.estaLogueado()) {
+      // No hay sesión → mostrar Login
+      Login.mostrar();
+      return;
+    }
+    
+    // 3. Storage (sabe el tipo de usuario gracias a Auth)
     Storage.inicializar();
     
-    // 3. UI
+    // 4. ¿Tiene onboarding pendiente? → Mostrar wizard
+    if (Storage.cargar('pendienteOnboarding')) {
+      this.mostrarOnboarding();
+      return;
+    }
+    
+    // 5. Todo OK → entrar al app normal
+    this.iniciarConSesion();
+  },
+  
+  /**
+   * v16 — mostrarOnboarding — Muestra el wizard de configuración inicial
+   */
+  mostrarOnboarding() {
+    if (typeof Onboarding !== 'undefined') {
+      Onboarding.mostrar();
+    } else {
+      // Si el módulo no está cargado, saltarse y entrar normal
+      console.warn('Onboarding no disponible, saltando...');
+      Storage.guardar('pendienteOnboarding', false);
+      this.iniciarConSesion();
+    }
+  },
+  
+  /**
+   * iniciarConSesion — Inicializa la app cuando ya hay sesión activa.
+   * Se llama desde init() si hay sesión, o desde Login después de loguearse.
+   */
+  iniciarConSesion() {
+    // UI
     this.cargarFechaHeader();
     this.cargarUsuarioPerfil();
     this.configurarNavegacion();
@@ -46,7 +94,10 @@ const App = {
     this.configurarBotonReset();
     this.configurarToggleTema();
     
-    // 4. Página inicial
+    // v15 — Configurar el botón de logout
+    this.configurarLogout();
+    
+    // Página inicial
     const hash = window.location.hash.replace('#', '');
     if (hash) this.estado.paginaActual = hash;
     this.cargarPaginaActual();
@@ -93,25 +144,165 @@ const App = {
     el.textContent = `${dias[hoy.getDay()]} ${hoy.getDate()} ${Fechas.MESES_CORTOS[hoy.getMonth()]}`;
   },
   
+  /**
+   * cargarUsuarioPerfil — Pinta nombre + avatar en header y sidebar.
+   * 
+   * v15: Si hay sesión activa, usa el usuario de Auth. Si no, usa API (legacy).
+   */
   cargarUsuarioPerfil() {
-    const usuario = API.obtenerUsuario();
+    // v15 — Si hay sesión, usar datos del usuario logueado; si no, usar API
+    let nombre = 'Usuario';
+    let esInvitado = false;
     
+    if (typeof Auth !== 'undefined' && Auth.estaLogueado()) {
+      const sesion = Auth.usuarioActual();
+      nombre = sesion.nombre || 'Usuario';
+      esInvitado = sesion.esInvitado === true;
+    } else {
+      const usuario = API.obtenerUsuario();
+      nombre = usuario.nombre || 'Usuario';
+    }
+    
+    const inicial = nombre.charAt(0).toUpperCase();
+    
+    // Header
     const nombreEl = document.getElementById('profileName');
-    if (nombreEl) nombreEl.textContent = usuario.nombre;
+    if (nombreEl) nombreEl.textContent = nombre;
     
     const avatarEl = document.getElementById('profileAvatar');
-    if (avatarEl) avatarEl.textContent = usuario.nombre.charAt(0).toUpperCase();
+    if (avatarEl) avatarEl.textContent = inicial;
     
     // Sidebar user card
     const sidebarName = document.getElementById('sidebarUserName');
-    if (sidebarName) sidebarName.textContent = usuario.nombre;
+    if (sidebarName) sidebarName.textContent = nombre;
     
     const sidebarAvatar = document.getElementById('sidebarUserAvatar');
-    if (sidebarAvatar) sidebarAvatar.textContent = usuario.nombre.charAt(0).toUpperCase();
+    if (sidebarAvatar) sidebarAvatar.textContent = inicial;
+    
+    // v15 — Mostrar badge "Invitado" si aplica
+    const planEl = document.querySelector('.header-profile-plan');
+    if (planEl) planEl.textContent = esInvitado ? 'Invitado' : 'Premium';
     
     // Versión
     const versionEl = document.getElementById('sidebarVersionLabel');
     if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
+  },
+  
+  /**
+   * configurarLogout — Engancha el botón de cerrar sesión.
+   * 
+   * Por ahora el logout se activa con click en el avatar del header (popup menú).
+   * En el futuro se puede agregar un botón explícito.
+   */
+  configurarLogout() {
+    // Crear elemento popup de menú si no existe
+    let menu = document.getElementById('userMenuPopup');
+    if (!menu) {
+      menu = document.createElement('div');
+      menu.id = 'userMenuPopup';
+      menu.className = 'user-menu-popup';
+      menu.style.display = 'none';
+      menu.innerHTML = `
+        <div class="user-menu-header">
+          <div class="user-menu-avatar" id="userMenuAvatar">U</div>
+          <div>
+            <div class="user-menu-name" id="userMenuName">Usuario</div>
+            <div class="user-menu-email" id="userMenuEmail">—</div>
+          </div>
+        </div>
+        <div class="user-menu-divider"></div>
+        <button class="user-menu-item" onclick="App.navegarA('configuracion'); App.cerrarUserMenu();">
+          ⚙️ Configuración
+        </button>
+        <button class="user-menu-item" onclick="App.navegarA('ayuda'); App.cerrarUserMenu();">
+          ❓ Ayuda
+        </button>
+        <div class="user-menu-divider"></div>
+        <button class="user-menu-item user-menu-logout" onclick="App.cerrarSesion()">
+          🚪 Cerrar sesión
+        </button>
+      `;
+      document.body.appendChild(menu);
+    }
+    
+    // Click en el área del perfil del header abre el menú
+    const profileWrap = document.querySelector('.header-profile');
+    if (profileWrap) {
+      profileWrap.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleUserMenu();
+      });
+    }
+    
+    // Cerrar menú al clickear fuera
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('userMenuPopup');
+      if (menu && menu.style.display !== 'none' && !menu.contains(e.target)) {
+        this.cerrarUserMenu();
+      }
+    });
+  },
+  
+  /**
+   * toggleUserMenu — Abre o cierra el menú de usuario
+   */
+  toggleUserMenu() {
+    const menu = document.getElementById('userMenuPopup');
+    if (!menu) return;
+    
+    if (menu.style.display === 'none') {
+      // Actualizar datos antes de mostrar
+      const sesion = (typeof Auth !== 'undefined') ? Auth.usuarioActual() : null;
+      const nombre = sesion?.nombre || API.obtenerUsuario().nombre || 'Usuario';
+      const email = sesion?.email || (sesion?.esInvitado ? 'Modo invitado' : '');
+      
+      const nameEl = document.getElementById('userMenuName');
+      const emailEl = document.getElementById('userMenuEmail');
+      const avatarEl = document.getElementById('userMenuAvatar');
+      if (nameEl) nameEl.textContent = nombre;
+      if (emailEl) emailEl.textContent = email || '—';
+      if (avatarEl) avatarEl.textContent = nombre.charAt(0).toUpperCase();
+      
+      // Posicionar cerca del perfil
+      const profile = document.querySelector('.header-profile');
+      if (profile) {
+        const rect = profile.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 8) + 'px';
+        menu.style.right = (window.innerWidth - rect.right) + 'px';
+      }
+      menu.style.display = 'block';
+    } else {
+      menu.style.display = 'none';
+    }
+  },
+  
+  cerrarUserMenu() {
+    const menu = document.getElementById('userMenuPopup');
+    if (menu) menu.style.display = 'none';
+  },
+  
+  /**
+   * cerrarSesion — Cierra sesión y vuelve al login
+   */
+  cerrarSesion() {
+    if (typeof Modal !== 'undefined' && Modal.confirmar) {
+      Modal.confirmar({
+        titulo: 'Cerrar sesión',
+        mensaje: '¿Seguro que quieres salir?',
+        textoConfirmar: 'Cerrar sesión',
+        tipoBoton: 'danger',
+        onConfirmar: () => this._hacerLogout(),
+      });
+    } else {
+      if (confirm('¿Cerrar sesión?')) this._hacerLogout();
+    }
+  },
+  
+  _hacerLogout() {
+    this.cerrarUserMenu();
+    if (typeof Auth !== 'undefined') Auth.logout();
+    // Recargar la página para volver al estado inicial limpio
+    window.location.reload();
   },
   
   configurarNavegacion() {

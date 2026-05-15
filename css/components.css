@@ -574,3 +574,97 @@ input[type="number"] {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+   v15 — Popup menú de usuario (al hacer click en el avatar del header)
+   ============================================================================ */
+
+.user-menu-popup {
+  position: fixed;
+  min-width: 240px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  z-index: 9000;
+  animation: userMenuIn 0.18s ease;
+}
+
+@keyframes userMenuIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.user-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+.user-menu-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #14F0CD, #06B6D4);
+  color: #0A0E1A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.user-menu-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.user-menu-email {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.user-menu-divider {
+  height: 1px;
+  background: var(--card-border);
+  margin: 4px 0;
+}
+
+.user-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.user-menu-item:hover {
+  background: var(--card-bg-secondary);
+  color: var(--text-primary);
+}
+
+.user-menu-logout {
+  color: #EF4444;
+}
+
+.user-menu-logout:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #EF4444;
+}
+
+/* Cursor pointer en el perfil del header */
+.header-profile {
+  cursor: pointer;
+  user-select: none;
+}
